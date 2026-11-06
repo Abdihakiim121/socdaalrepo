@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { ApiService, errorText } from '../core/api.service';
-import { City, Route, User } from '../core/api.types';
+import { City, Route, Station, User } from '../core/api.types';
 import { TranslatePipe } from '../core/i18n';
 import { StationContextService } from '../core/station-context.service';
 
@@ -13,121 +13,165 @@ import { StationContextService } from '../core/station-context.service';
   imports: [FormsModule, TranslatePipe],
   template: `
     <div class="page">
-      <h1>{{ 'admin' | t }}</h1>
+      <header class="page-header">
+        <div>
+          <h1>{{ 'admin' | t }}</h1>
+          <p class="page-sub">Cities, boosteejos, the routes they serve, and who can sign in.</p>
+        </div>
+      </header>
 
       @if (message()) {
-        <div class="alert alert-ok" role="status">{{ message() }}</div>
+        <div class="alert alert-success" role="status">{{ message() }}</div>
       }
       @if (error()) {
         <div class="alert alert-error" role="alert">{{ error() }}</div>
       }
 
-      <!-- Cities -->
-      <section class="card stack">
-        <h2>Cities</h2>
-        <div class="row">
-          @for (c of cities(); track c.id) { <span class="pill">{{ c.name }}</span> }
-        </div>
-        <form class="form-grid" (ngSubmit)="addCity()">
-          <div class="field"><label for="cname">City name</label><input id="cname" name="cname" required [(ngModel)]="city.name"></div>
-          <div class="field"><label for="cregion">Region</label><input id="cregion" name="cregion" [(ngModel)]="city.region"></div>
-          <button class="btn" type="submit">Add city</button>
-        </form>
-      </section>
-
       <!-- Boosteejos -->
-      <section class="card stack">
-        <h2>Boosteejos</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>City</th><th>Boosteejo</th><th>District / landmark</th><th>Contact</th><th>Hours</th><th>Routes</th></tr></thead>
-            <tbody>
-              @for (s of ctx.stations(); track s.id) {
-                <tr>
-                  <td>{{ s.city?.name }}</td>
-                  <td><strong>{{ s.name }}</strong></td>
-                  <td>{{ s.district || '—' }}{{ s.landmark ? ' · ' + s.landmark : '' }}</td>
-                  <td>{{ s.contactName || '—' }}{{ s.contactPhone ? ' · ' + s.contactPhone : '' }}</td>
-                  <td>{{ s.openingHours || '—' }}</td>
-                  <td>{{ routeNames(s.routes) }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Boosteejos</h2>
+            <p>Every bus station, with where it is and who to call.</p>
+          </div>
+          <span class="muted">{{ ctx.stations().length }} registered</span>
         </div>
-        <form class="stack" (ngSubmit)="addStation()">
+        @if (ctx.stations().length > 0) {
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Boosteejo</th><th>City</th><th>Location</th><th>Contact</th><th>Hours</th><th>Destinations</th></tr></thead>
+              <tbody>
+                @for (s of ctx.stations(); track s.id) {
+                  <tr>
+                    <td class="strong">{{ s.name }}</td>
+                    <td>{{ s.city?.name }}</td>
+                    <td>{{ location(s) }}</td>
+                    <td>{{ s.contactName || '—' }}@if (s.contactPhone) { <span class="muted">, {{ s.contactPhone }}</span> }</td>
+                    <td>{{ s.openingHours || '—' }}</td>
+                    <td>{{ routeNames(s.routes) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <form class="panel-body sub-form" (ngSubmit)="addStation()">
           <h3>Add a boosteejo</h3>
           <div class="form-grid">
             <div class="field">
-              <label for="scity">City</label>
-              <select id="scity" name="scity" required [(ngModel)]="station.cityId">
+              <label class="label" for="scity">City</label>
+              <select class="select" id="scity" name="scity" required [(ngModel)]="station.cityId">
                 @for (c of cities(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
               </select>
             </div>
-            <div class="field"><label for="sname">Name</label><input id="sname" name="sname" required [(ngModel)]="station.name" placeholder="Garoowe boosteejo"></div>
-            <div class="field"><label for="sdistrict">District</label><input id="sdistrict" name="sdistrict" [(ngModel)]="station.district"></div>
-            <div class="field"><label for="slandmark">Landmark</label><input id="slandmark" name="slandmark" [(ngModel)]="station.landmark"></div>
-            <div class="field"><label for="slat">Latitude</label><input id="slat" name="slat" type="number" step="any" [(ngModel)]="station.latitude"></div>
-            <div class="field"><label for="slng">Longitude</label><input id="slng" name="slng" type="number" step="any" [(ngModel)]="station.longitude"></div>
-            <div class="field"><label for="scontact">Contact name</label><input id="scontact" name="scontact" [(ngModel)]="station.contactName"></div>
-            <div class="field"><label for="sphone">Contact phone</label><input id="sphone" name="sphone" type="tel" [(ngModel)]="station.contactPhone"></div>
-            <div class="field"><label for="shours">Opening hours</label><input id="shours" name="shours" [(ngModel)]="station.openingHours" placeholder="5:00–18:00"></div>
-            <button class="btn btn-primary" type="submit">Add boosteejo</button>
+            <div class="field"><label class="label" for="sname">Name</label><input class="input" id="sname" name="sname" required [(ngModel)]="station.name" placeholder="Garoowe boosteejo"></div>
+            <div class="field"><label class="label" for="sdistrict">District</label><input class="input" id="sdistrict" name="sdistrict" [(ngModel)]="station.district"></div>
+            <div class="field"><label class="label" for="slandmark">Landmark</label><input class="input" id="slandmark" name="slandmark" [(ngModel)]="station.landmark"></div>
+            <div class="field"><label class="label" for="slat">Latitude</label><input class="input" id="slat" name="slat" type="number" step="any" [(ngModel)]="station.latitude"></div>
+            <div class="field"><label class="label" for="slng">Longitude</label><input class="input" id="slng" name="slng" type="number" step="any" [(ngModel)]="station.longitude"></div>
+            <div class="field"><label class="label" for="scontact">Contact name</label><input class="input" id="scontact" name="scontact" [(ngModel)]="station.contactName"></div>
+            <div class="field"><label class="label" for="sphone">Contact phone</label><input class="input" id="sphone" name="sphone" type="tel" [(ngModel)]="station.contactPhone"></div>
+            <div class="field"><label class="label" for="shours">Opening hours</label><input class="input" id="shours" name="shours" [(ngModel)]="station.openingHours" placeholder="5:00–18:00"></div>
           </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Add boosteejo</button></div>
         </form>
       </section>
 
-      <!-- Routes of the chosen boosteejo -->
-      <section class="card stack">
-        <h2>Routes from {{ ctx.station()?.name }}</h2>
-        <p class="muted small">Choose the boosteejo in the top bar.</p>
-        @for (r of ctx.station()?.routes ?? []; track r.id) {
-          <div class="row spread">
-            <span>→ {{ r.destinationCity?.name }}</span>
-            <button type="button" class="btn" (click)="toggleRoute(r)">{{ r.active ? 'Turn off' : 'Turn on' }}</button>
+      <div class="two-col">
+        <!-- Routes of the chosen boosteejo -->
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Routes from {{ ctx.station()?.name }}</h2>
+              <p>Switch boosteejo in the sidebar to edit another.</p>
+            </div>
           </div>
-        }
-        <form class="row" (ngSubmit)="addRoute()">
-          <div class="field grow">
-            <label for="rdest">Destination</label>
-            <select id="rdest" name="rdest" required [(ngModel)]="routeDestination">
-              @for (c of destinations(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
-            </select>
+          <ul class="list">
+            @for (r of ctx.station()?.routes ?? []; track r.id) {
+              <li>
+                <span>{{ ctx.station()?.city?.name }} → <strong>{{ r.destinationCity?.name }}</strong></span>
+                <span class="list-end">
+                  <span [class]="'status ' + (r.active ? 'status-active' : 'status-waiting')">{{ r.active ? 'Active' : 'Off' }}</span>
+                  <button type="button" class="btn btn-sm" (click)="toggleRoute(r)">{{ r.active ? 'Turn off' : 'Turn on' }}</button>
+                </span>
+              </li>
+            } @empty {
+              <li class="muted">No routes yet.</li>
+            }
+          </ul>
+          <form class="panel-body sub-form inline-form" (ngSubmit)="addRoute()">
+            <div class="field">
+              <label class="label" for="rdest">New destination</label>
+              <select class="select" id="rdest" name="rdest" required [(ngModel)]="routeDestination">
+                @for (c of destinations(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+              </select>
+            </div>
+            <button class="btn" type="submit">Add route</button>
+          </form>
+        </section>
+
+        <!-- Cities -->
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Cities</h2>
+              <p>Where boosteejos are, and where buses go.</p>
+            </div>
           </div>
-          <button class="btn" type="submit" style="align-self: flex-end">Add route</button>
-        </form>
-      </section>
+          <div class="panel-body chips">
+            @for (c of cities(); track c.id) { <span class="chip">{{ c.name }}</span> }
+          </div>
+          <form class="panel-body sub-form inline-form" (ngSubmit)="addCity()">
+            <div class="field"><label class="label" for="cname">City</label><input class="input" id="cname" name="cname" required [(ngModel)]="city.name"></div>
+            <div class="field"><label class="label" for="cregion">Region</label><input class="input" id="cregion" name="cregion" [(ngModel)]="city.region"></div>
+            <button class="btn" type="submit">Add city</button>
+          </form>
+        </section>
+      </div>
 
       <!-- Managers -->
-      <section class="card stack">
-        <h2>Managers</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Boosteejo</th><th>Active</th></tr></thead>
-            <tbody>
-              @for (u of users(); track u.id) {
-                <tr>
-                  <td>{{ u.name }}</td>
-                  <td>{{ u.phone }}</td>
-                  <td>{{ u.role }}</td>
-                  <td>{{ u.station?.name || '—' }}</td>
-                  <td><button type="button" class="btn" (click)="toggleUser(u)">{{ u.active ? 'Active' : 'Off' }}</button></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <form class="form-grid" (ngSubmit)="addUser()">
-          <div class="field"><label for="uname">Name</label><input id="uname" name="uname" required [(ngModel)]="user.name"></div>
-          <div class="field"><label for="uphone">Phone</label><input id="uphone" name="uphone" type="tel" required [(ngModel)]="user.phone"></div>
-          <div class="field"><label for="upin">PIN (4–6 digits)</label><input id="upin" name="upin" inputmode="numeric" required minlength="4" maxlength="6" [(ngModel)]="user.pin"></div>
-          <div class="field">
-            <label for="ustation">Boosteejo</label>
-            <select id="ustation" name="ustation" required [(ngModel)]="user.stationId">
-              @for (s of ctx.stations(); track s.id) { <option [ngValue]="s.id">{{ s.city?.name }} · {{ s.name }}</option> }
-            </select>
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Managers</h2>
+            <p>People who sign in to run a boosteejo.</p>
           </div>
-          <button class="btn btn-primary" type="submit">Add manager</button>
+        </div>
+        @if (users().length > 0) {
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Boosteejo</th><th>Access</th></tr></thead>
+              <tbody>
+                @for (u of users(); track u.id) {
+                  <tr [class.row-dim]="!u.active">
+                    <td class="strong">{{ u.name }}</td>
+                    <td>+252 {{ u.phone }}</td>
+                    <td>{{ u.role === 'admin' ? 'Admin' : 'Manager' }}</td>
+                    <td>{{ u.station?.name || '—' }}</td>
+                    <td>
+                      <span [class]="'status ' + (u.active ? 'status-active' : 'status-waiting')">{{ u.active ? 'Can sign in' : 'Blocked' }}</span>
+                      <button type="button" class="btn btn-sm" style="margin-left: 8px" (click)="toggleUser(u)">{{ u.active ? 'Block' : 'Allow' }}</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <form class="panel-body sub-form" (ngSubmit)="addUser()">
+          <h3>Add a manager</h3>
+          <div class="form-grid">
+            <div class="field"><label class="label" for="uname">Name</label><input class="input" id="uname" name="uname" required [(ngModel)]="user.name"></div>
+            <div class="field"><label class="label" for="uphone">Phone</label><input class="input" id="uphone" name="uphone" type="tel" required [(ngModel)]="user.phone"></div>
+            <div class="field"><label class="label" for="upin">PIN</label><input class="input" id="upin" name="upin" inputmode="numeric" required minlength="4" maxlength="6" [(ngModel)]="user.pin"><span class="hint">4 to 6 digits. Give it to the manager in person.</span></div>
+            <div class="field">
+              <label class="label" for="ustation">Boosteejo</label>
+              <select class="select" id="ustation" name="ustation" required [(ngModel)]="user.stationId">
+                @for (s of ctx.stations(); track s.id) { <option [ngValue]="s.id">{{ s.name }}, {{ s.city?.name }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" type="submit">Add manager</button></div>
         </form>
       </section>
     </div>
@@ -153,6 +197,10 @@ export class AdminComponent {
   constructor() {
     this.loadCities();
     this.loadUsers();
+  }
+
+  location(s: Station) {
+    return [s.district, s.landmark].filter((x) => !!x).join(', ') || '—';
   }
 
   routeNames(routes: Route[] | undefined) {
