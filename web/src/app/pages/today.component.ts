@@ -13,56 +13,61 @@ import { StationContextService } from '../core/station-context.service';
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <div class="page-head">
+      <header class="page-header">
         <div>
           <h1>{{ 'today' | t }}</h1>
-          <span class="muted">{{ data()?.station?.name }} · {{ data()?.date }}</span>
+          <p class="page-sub">{{ 'todaySub' | t }}{{ data() ? ', ' + data()!.date : '' }}</p>
         </div>
-        <a class="btn btn-primary" routerLink="/buses/arrival">{{ 'registerBus' | t }}</a>
-      </div>
+        <div class="page-actions">
+          <a class="btn btn-primary" routerLink="/buses/arrival">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            {{ 'registerBus' | t }}
+          </a>
+        </div>
+      </header>
 
       @if (error()) {
         <div class="alert alert-error" role="alert">{{ error() }}</div>
       }
 
       @if (data(); as d) {
-        <div class="grid">
-          <div class="card stat"><span class="muted small">{{ 'busesInQueue' | t }}</span><strong>{{ d.totals.busesInQueue }}</strong></div>
-          <div class="card stat"><span class="muted small">{{ 'departedToday' | t }}</span><strong>{{ d.totals.departedToday }}</strong></div>
-          <div class="card stat"><span class="muted small">{{ 'passengersToday' | t }}</span><strong>{{ d.totals.passengersToday }}</strong></div>
-        </div>
+        <section class="panel stats">
+          <div class="stat"><span class="stat-label">{{ 'busesInQueue' | t }}</span><span class="stat-value">{{ d.totals.busesInQueue }}</span></div>
+          <div class="stat"><span class="stat-label">{{ 'departedToday' | t }}</span><span class="stat-value">{{ d.totals.departedToday }}</span></div>
+          <div class="stat"><span class="stat-label">{{ 'passengersToday' | t }}</span><span class="stat-value">{{ d.totals.passengersToday }}</span></div>
+        </section>
 
-        <div class="card">
-          <h2>{{ 'routes' | t }}</h2>
+        <section class="panel">
+          <div class="panel-header"><h2>{{ 'routes' | t }}</h2></div>
           @if (d.routes.length === 0) {
-            <p class="muted">{{ 'noRoutes' | t }}</p>
+            <div class="empty"><p>{{ 'noRoutes' | t }}</p></div>
           } @else {
             <div class="table-wrap">
-              <table>
+              <table class="table">
                 <thead>
                   <tr>
                     <th>{{ 'route' | t }}</th>
-                    <th>{{ 'busesInQueue' | t }}</th>
-                    <th>{{ 'departedToday' | t }}</th>
-                    <th>{{ 'passengersToday' | t }}</th>
+                    <th class="num">{{ 'busesInQueue' | t }}</th>
+                    <th class="num">{{ 'departedToday' | t }}</th>
+                    <th class="num">{{ 'passengersToday' | t }}</th>
                     <th><span class="sr">{{ 'open' | t }}</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (r of d.routes; track r.routeId) {
                     <tr>
-                      <td><strong>→ {{ r.destination }}</strong></td>
-                      <td>{{ r.busesInQueue }}</td>
-                      <td>{{ r.departedToday }}</td>
-                      <td>{{ r.passengersToday }}</td>
-                      <td><a [routerLink]="['/queue']" [queryParams]="{ routeId: r.routeId }">{{ 'queue' | t }}</a></td>
+                      <td class="strong">{{ d.station.city }} → {{ r.destination }}</td>
+                      <td class="num">{{ r.busesInQueue }}</td>
+                      <td class="num">{{ r.departedToday }}</td>
+                      <td class="num">{{ r.passengersToday }}</td>
+                      <td class="num"><a class="btn btn-sm" [routerLink]="['/queue']" [queryParams]="{ routeId: r.routeId }">{{ 'queue' | t }}</a></td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
           }
-        </div>
+        </section>
       }
     </div>
   `,

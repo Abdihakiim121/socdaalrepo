@@ -15,61 +15,91 @@ import { isoToTime, timeToIso } from '../core/time';
   imports: [RouterLink, TranslatePipe],
   template: `
     <div class="page">
-      <div class="page-head">
-        <h1>{{ 'queue' | t }}</h1>
-        <a class="btn btn-primary" routerLink="/buses/arrival" [queryParams]="{ routeId: selectedRouteId() }">
-          {{ 'registerBus' | t }}
-        </a>
-      </div>
-
-      @if (routes().length === 0) {
-        <div class="empty">{{ 'noRoutes' | t }}</div>
-      } @else {
-        <div class="row" role="group" [attr.aria-label]="'route' | t">
-          @for (r of routes(); track r.id) {
-            <button type="button" class="pill" [class.active]="r.id === selectedRouteId()" (click)="selectRoute(r.id)">
-              → {{ r.destinationCity?.name }}
-            </button>
-          }
+      <header class="page-header">
+        <div>
+          <h1>{{ 'queue' | t }}</h1>
+          <p class="page-sub">{{ 'queueSub' | t }}</p>
         </div>
-      }
+        <div class="page-actions">
+          <a class="btn btn-primary" routerLink="/buses/arrival" [queryParams]="{ routeId: selectedRouteId() }">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            {{ 'registerBus' | t }}
+          </a>
+        </div>
+      </header>
 
       @if (error()) {
         <div class="alert alert-error" role="alert">{{ error() }}</div>
       }
 
-      @if (selectedRouteId() && trips().length === 0 && !loading()) {
-        <div class="empty">{{ 'noBuses' | t }}</div>
-      }
-
-      @for (trip of trips(); track trip.id; let first = $first; let last = $last) {
-        <div class="card queue-item">
-          <div class="queue-pos">{{ trip.queuePosition }}</div>
-          <div class="grow">
-            <a [routerLink]="['/trips', trip.id]"><strong>{{ trip.bus.plate }}</strong></a>
-            <div class="muted small">
-              {{ trip.driverName || '—' }} · {{ trip.seatsBooked }}/{{ trip.bus.seatCount }} {{ 'booked' | t }} ·
-              {{ trip.seatsLeft }} {{ 'seatsLeft' | t }}
+      <section class="panel">
+        @if (routes().length === 0) {
+          <div class="empty">
+            <h3>{{ 'routes' | t }}</h3>
+            <p>{{ 'noRoutes' | t }}</p>
+          </div>
+        } @else {
+          <div class="panel-header">
+            <div class="segmented" role="tablist" [attr.aria-label]="'route' | t">
+              @for (r of routes(); track r.id) {
+                <button type="button" role="tab" [class.on]="r.id === selectedRouteId()"
+                        [attr.aria-selected]="r.id === selectedRouteId()" (click)="selectRoute(r.id)">
+                  {{ r.destinationCity?.name }}
+                </button>
+              }
             </div>
+            <span class="muted">{{ trips().length }} {{ 'busesInQueue' | t }}</span>
           </div>
-          <span [class]="'badge badge-' + trip.status">{{ statusKey(trip) | t }}</span>
-          <div class="field">
-            <label [for]="'time-' + trip.id">{{ 'departureTime' | t }}</label>
-            <input [id]="'time-' + trip.id" type="time" [value]="time(trip)" (change)="setTime(trip, $event)">
-          </div>
-          <div class="row">
-            <button type="button" class="btn btn-icon" [attr.aria-label]="'moveUp' | t" [disabled]="first || busy()" (click)="move(trip, 'up')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
-            </button>
-            <button type="button" class="btn btn-icon" [attr.aria-label]="'moveDown' | t" [disabled]="last || busy()" (click)="move(trip, 'down')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
-            </button>
-            @if (first) {
-              <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="depart(trip)">{{ 'markDeparted' | t }}</button>
-            }
-          </div>
-        </div>
-      }
+
+          @if (trips().length === 0 && !loading()) {
+            <div class="empty">
+              <h3>{{ 'noBuses' | t }}</h3>
+              <p>{{ 'noBusesHint' | t }}</p>
+              <a class="btn" routerLink="/buses/arrival" [queryParams]="{ routeId: selectedRouteId() }">{{ 'registerBus' | t }}</a>
+            </div>
+          }
+
+          @for (trip of trips(); track trip.id; let first = $first; let last = $last) {
+            <div class="board-row" [class.boarding]="trip.status === 'boarding'">
+              <span class="board-pos" [attr.aria-label]="'#' + trip.queuePosition">{{ trip.queuePosition }}</span>
+
+              <div class="board-time">
+                <label class="sr" [for]="'time-' + trip.id">{{ 'departureTime' | t }}</label>
+                <input [id]="'time-' + trip.id" type="time" [value]="time(trip)" (change)="setTime(trip, $event)">
+                @if (!trip.departureTime) { <span class="hint">{{ 'timeNotSet' | t }}</span> }
+              </div>
+
+              <div class="board-bus">
+                <a [routerLink]="['/trips', trip.id]"><span class="plate">{{ trip.bus.plate }}</span></a>
+                <span class="driver">{{ trip.driverName || ('driver' | t) + ': —' }}</span>
+              </div>
+
+              <div class="board-seats">
+                <span class="count"><strong>{{ trip.seatsBooked }}</strong> {{ 'of' | t }} {{ trip.bus.seatCount }} {{ 'booked' | t }}</span>
+                <div class="meter" [class.full]="trip.seatsLeft === 0" role="presentation">
+                  <span [style.width.%]="pct(trip)"></span>
+                </div>
+              </div>
+
+              <span [class]="'status status-' + trip.status">{{ statusKey(trip) | t }}</span>
+
+              <div class="board-actions">
+                <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'moveUp' | t" [title]="'moveUp' | t" [disabled]="first || busy()" (click)="move(trip, 'up')">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+                </button>
+                <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'moveDown' | t" [title]="'moveDown' | t" [disabled]="last || busy()" (click)="move(trip, 'down')">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
+                @if (first) {
+                  <button type="button" class="btn btn-primary btn-sm" [disabled]="busy()" (click)="depart(trip)">{{ 'markDeparted' | t }}</button>
+                } @else {
+                  <a class="btn btn-sm" [routerLink]="['/trips', trip.id]">{{ 'passengers' | t }}</a>
+                }
+              </div>
+            </div>
+          }
+        }
+      </section>
     </div>
   `,
 })
@@ -117,6 +147,10 @@ export class QueueComponent {
 
   statusKey(trip: Trip): TextKey {
     return trip.status;
+  }
+
+  pct(trip: Trip) {
+    return trip.bus.seatCount ? Math.min(100, Math.round((trip.seatsBooked / trip.bus.seatCount) * 100)) : 0;
   }
 
   time(trip: Trip) {
