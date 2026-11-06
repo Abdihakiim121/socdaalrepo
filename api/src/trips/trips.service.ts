@@ -243,7 +243,9 @@ export class TripsService {
   // ---------- Helpers shared with passengers ----------
 
   async findTrip(id: number, em: EntityManager = this.ds.manager) {
-    const trip = await em.getRepository(Trip).findOne({ where: { id }, relations: { route: true, bus: true } });
+    const trip = await em
+      .getRepository(Trip)
+      .findOne({ where: { id }, relations: { route: { destinationCity: true }, bus: true } });
     if (!trip) throw new NotFoundException('Trip not found');
     return trip;
   }
