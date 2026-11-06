@@ -1,6 +1,6 @@
 # Socdaal Boosteejo web app
 
-The Angular manager app. A manager signs in with phone and PIN and works on their own boosteejo; the admin can switch between boosteejos from the top bar.
+The Angular manager app. A manager signs in with phone and PIN and works on their own boosteejo; the admin can switch between boosteejos from the sidebar. On phones the sidebar opens from the menu button.
 
 | Screen | Path | What it does |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ The Angular manager app. A manager signs in with phone and PIN and works on thei
 | Records | `/records` | Trips by date, route or plate; passengers by name or phone |
 | Admin | `/admin` | Cities, boosteejos (location, contact, hours), routes, manager accounts |
 
-Screens are in Somali by default, with an English switch in the top bar. The Somali wording in `src/app/core/i18n.ts` is a first draft: have a boosteejo manager check it before the pilot.
+Screens are in Somali by default, with an English switch at the bottom of the sidebar. The Somali wording in `src/app/core/i18n.ts` is a first draft: have a boosteejo manager check it before the pilot.
 
 All times are shown and entered in Mogadishu time (UTC+3).
 

@@ -54,6 +54,7 @@ const TEXT = {
   arrived: { en: 'Arrived', so: 'Yimid' },
   status: { en: 'Status', so: 'Xaaladda' },
   notConnected: { en: 'Not connected — changes from other devices will not show', so: 'Lama xiriirin — isbeddelada qalabka kale ma muuqanayaan' },
+  menu: { en: 'Menu', so: 'Menu-ga' },
   chooseStation: { en: 'Choose boosteejo', so: 'Dooro boosteejo' },
   noRoutes: { en: 'This boosteejo has no routes yet. The admin adds them.', so: 'Boosteejadan weli jid looma samayn. Maamulaha ayaa ku daraya.' },
 } satisfies Record<string, Record<Lang, string>>;
