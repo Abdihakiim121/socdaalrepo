@@ -30,10 +30,10 @@ export class Trip extends BaseEntity {
   @Column({ name: 'bus_id' })
   busId: number;
 
-  @Column({ name: 'driver_name', length: 100, nullable: true })
+  @Column({ name: 'driver_name', type: 'varchar', length: 100, nullable: true })
   driverName: string | null;
 
-  @Column({ name: 'driver_phone', length: 30, nullable: true })
+  @Column({ name: 'driver_phone', type: 'varchar', length: 30, nullable: true })
   driverPhone: string | null;
 
   /** 1 = first in line. Null once the trip has departed or been cancelled. */

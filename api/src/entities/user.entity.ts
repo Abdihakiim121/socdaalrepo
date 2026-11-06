@@ -14,7 +14,7 @@ export class User extends BaseEntity {
   @JoinColumn({ name: 'station_id' })
   station: Station | null;
 
-  @Column({ name: 'station_id', nullable: true })
+  @Column({ name: 'station_id', type: 'int', nullable: true })
   stationId: number | null;
 
   @Column({ length: 100 })

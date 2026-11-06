@@ -4,10 +4,10 @@ import { Station } from './station.entity';
 
 @Entity('cities')
 export class City extends BaseEntity {
-  @Column({ length: 100, unique: true })
+  @Column({ type: 'varchar', length: 100, unique: true })
   name: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   region: string | null;
 
   @OneToMany(() => Station, (station) => station.city)

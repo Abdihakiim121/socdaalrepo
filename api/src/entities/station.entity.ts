@@ -20,13 +20,13 @@ export class Station extends BaseEntity {
   @Column({ name: 'city_id' })
   cityId: number;
 
-  @Column({ length: 150 })
+  @Column({ type: 'varchar', length: 150 })
   name: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   district: string | null;
 
-  @Column({ length: 200, nullable: true })
+  @Column({ type: 'varchar', length: 200, nullable: true })
   landmark: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true, transformer: decimalToNumber })
@@ -35,13 +35,13 @@ export class Station extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true, transformer: decimalToNumber })
   longitude: number | null;
 
-  @Column({ name: 'contact_name', length: 100, nullable: true })
+  @Column({ name: 'contact_name', type: 'varchar', length: 100, nullable: true })
   contactName: string | null;
 
-  @Column({ name: 'contact_phone', length: 30, nullable: true })
+  @Column({ name: 'contact_phone', type: 'varchar', length: 30, nullable: true })
   contactPhone: string | null;
 
-  @Column({ name: 'opening_hours', length: 100, nullable: true })
+  @Column({ name: 'opening_hours', type: 'varchar', length: 100, nullable: true })
   openingHours: string | null;
 
   @Column({ default: true })
