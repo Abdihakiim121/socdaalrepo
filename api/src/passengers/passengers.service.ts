@@ -7,7 +7,8 @@ import { AuthUser } from '../auth/auth.types';
 import { Bus, Passenger, PassengerStatus, Trip } from '../entities';
 import { LiveGateway } from '../live/live.gateway';
 import { ACTIVE_STATUSES, TripsService } from '../trips/trips.service';
-import { CreatePassengerDto } from './passengers.dto';
+import { dayRange, mogadishuToday } from '../common/dates';
+import { CreatePassengerDto, PassengerQueryDto } from './passengers.dto';
 
 @Injectable()
 export class PassengersService {
@@ -71,10 +72,13 @@ export class PassengersService {
     return passenger;
   }
 
-  /** Find passengers by name or phone, newest first. Managers only see their own boosteejo. */
-  search(q: string, user: AuthUser) {
-    const text = q.trim();
-    if (text.length < 2) throw new BadRequestException('Type at least 2 letters or digits');
+  /**
+   * The Passengers list: everyone registered on a day (default today, Mogadishu time),
+   * or everyone matching a name or phone. Managers only see their own boosteejo.
+   */
+  browse(query: PassengerQueryDto, user: AuthUser) {
+    const text = (query.q ?? '').trim();
+    if (text && text.length < 2) throw new BadRequestException('Type at least 2 letters or digits');
 
     const qb = this.passengers
       .createQueryBuilder('p')
@@ -83,14 +87,22 @@ export class PassengersService {
       .innerJoinAndSelect('t.route', 'r')
       .innerJoinAndSelect('r.station', 's')
       .innerJoinAndSelect('r.destinationCity', 'dest')
-      .where('(p.name LIKE :name OR p.phone LIKE :phone)', {
+      .orderBy('p.createdAt', 'DESC')
+      .take(500);
+
+    if (text) {
+      qb.andWhere('(p.name LIKE :name OR p.phone LIKE :phone)', {
         name: `%${text}%`,
         phone: `%${normalizePhone(text) || text}%`,
-      })
-      .orderBy('p.createdAt', 'DESC')
-      .take(100);
+      });
+    } else {
+      const { from, to } = dayRange(query.date ?? mogadishuToday());
+      qb.andWhere('p.createdAt >= :from AND p.createdAt < :to', { from, to });
+    }
 
-    if (!isAdmin(user)) qb.andWhere('s.id = :stationId', { stationId: user.stationId });
+    const stationId = isAdmin(user) ? query.stationId : user.stationId;
+    if (stationId) qb.andWhere('s.id = :stationId', { stationId });
+    if (query.routeId) qb.andWhere('r.id = :routeId', { routeId: query.routeId });
     return qb.getMany();
   }
 

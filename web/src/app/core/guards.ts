@@ -9,5 +9,5 @@ export const authGuard: CanActivateFn = () => {
 
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
-  return auth.isAdmin() ? true : inject(Router).createUrlTree(['/today']);
+  return auth.isAdmin() ? true : inject(Router).createUrlTree(['/dashboard']);
 };

@@ -7,12 +7,13 @@ import { Trip } from '../core/api.types';
 import { TextKey, TranslatePipe } from '../core/i18n';
 import { LiveService } from '../core/live.service';
 import { StationContextService } from '../core/station-context.service';
+import { IconComponent } from '../shared/icon.component';
 import { isoToTime, timeToIso } from '../core/time';
 
 @Component({
   selector: 'app-queue',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, IconComponent],
   template: `
     <div class="page">
       <header class="page-header">
@@ -21,9 +22,9 @@ import { isoToTime, timeToIso } from '../core/time';
           <p class="page-sub">{{ 'queueSub' | t }}</p>
         </div>
         <div class="page-actions">
-          <a class="btn btn-primary" routerLink="/buses/arrival" [queryParams]="{ routeId: selectedRouteId() }">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-            {{ 'registerBus' | t }}
+          <a class="btn btn-primary" routerLink="/boosteejo/arrival" [queryParams]="{ routeId: selectedRouteId() }">
+            <app-icon name="plus" />
+            {{ 'registerArrival' | t }}
           </a>
         </div>
       </header>
@@ -55,7 +56,7 @@ import { isoToTime, timeToIso } from '../core/time';
             <div class="empty">
               <h3>{{ 'noBuses' | t }}</h3>
               <p>{{ 'noBusesHint' | t }}</p>
-              <a class="btn" routerLink="/buses/arrival" [queryParams]="{ routeId: selectedRouteId() }">{{ 'registerBus' | t }}</a>
+              <a class="btn" routerLink="/boosteejo/arrival" [queryParams]="{ routeId: selectedRouteId() }">{{ 'registerArrival' | t }}</a>
             </div>
           }
 
@@ -70,7 +71,7 @@ import { isoToTime, timeToIso } from '../core/time';
               </div>
 
               <div class="board-bus">
-                <a [routerLink]="['/trips', trip.id]"><span class="plate">{{ trip.bus.plate }}</span></a>
+                <a [routerLink]="['/boosteejo/trips', trip.id]"><span class="plate">{{ trip.bus.plate }}</span></a>
                 <span class="driver">{{ trip.driverName || ('driver' | t) + ': —' }}</span>
               </div>
 
@@ -85,15 +86,15 @@ import { isoToTime, timeToIso } from '../core/time';
 
               <div class="board-actions">
                 <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'moveUp' | t" [title]="'moveUp' | t" [disabled]="first || busy()" (click)="move(trip, 'up')">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+                  <app-icon name="up" />
                 </button>
                 <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'moveDown' | t" [title]="'moveDown' | t" [disabled]="last || busy()" (click)="move(trip, 'down')">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+                  <app-icon name="down" />
                 </button>
                 @if (first) {
                   <button type="button" class="btn btn-primary btn-sm" [disabled]="busy()" (click)="depart(trip)">{{ 'markDeparted' | t }}</button>
                 } @else {
-                  <a class="btn btn-sm" [routerLink]="['/trips', trip.id]">{{ 'passengers' | t }}</a>
+                  <a class="btn btn-sm" [routerLink]="['/boosteejo/trips', trip.id]">{{ 'passengers' | t }}</a>
                 }
               </div>
             </div>

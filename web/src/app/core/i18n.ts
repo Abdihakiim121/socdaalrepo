@@ -77,6 +77,39 @@ const TEXT = {
   signInSub: { en: 'Sign in with the phone number and PIN the admin gave you.', so: 'Ku gal lambarka taleefanka iyo PIN-ka maamulaha kuu siiyay.' },
   chooseStation: { en: 'Choose boosteejo', so: 'Dooro boosteejo' },
   noRoutes: { en: 'This boosteejo has no routes yet. The admin adds them.', so: 'Boosteejadan weli jid looma samayn. Maamulaha ayaa ku daraya.' },
+
+  // Navigation
+  dashboard: { en: 'Dashboard', so: 'Guud ahaan' },
+  registerArrival: { en: 'Register arrival', so: 'Diiwaangeli imaatin' },
+  buses: { en: 'Buses', so: 'Basaska' },
+  dalmar: { en: 'Dalmar', so: 'Dalmar' },
+  tours: { en: 'Tours', so: 'Dalxiisyo' },
+  hotels: { en: 'Hotels', so: 'Hoteelo' },
+  guides: { en: 'Guides', so: 'Hagayaal' },
+  soon: { en: 'Soon', so: 'Dhawaan' },
+  administration: { en: 'Administration', so: 'Maamulka' },
+  userManagement: { en: 'User management', so: 'Maaraynta isticmaalayaasha' },
+  settings: { en: 'Settings', so: 'Habaynta' },
+  boosteejos: { en: 'Boosteejos', so: 'Boosteejooyinka' },
+  cities: { en: 'Cities', so: 'Magaalooyinka' },
+  live: { en: 'Live', so: 'Toos' },
+  offline: { en: 'Offline', so: 'Ma xiriirsana' },
+  language: { en: 'Language', so: 'Luqadda' },
+  roleAdmin: { en: 'Admin', so: 'Maamule' },
+  roleManager: { en: 'Manager', so: 'Maareeye' },
+  switchBoosteejo: { en: 'Switch boosteejo', so: 'Beddel boosteejo' },
+
+  // Passengers and buses pages
+  passengersSub: { en: 'Everyone registered on a bus at this boosteejo', so: 'Qof kasta oo bas looga diiwaangeliyay boosteejadan' },
+  busesSub: { en: 'Buses are registered once and can queue at any boosteejo', so: 'Bas hal mar ayaa la diiwaangeliyaa, safka boosteejo kasta wuu geli karaa' },
+  tripsSub: { en: 'Every bus that queued here, by day', so: 'Bas kasta oo halkan safka galay, maalin maalin' },
+  addBus: { en: 'Add bus', so: 'Ku dar bas' },
+  editBus: { en: 'Edit bus', so: 'Wax ka beddel baska' },
+  edit: { en: 'Edit', so: 'Beddel' },
+  time: { en: 'Time', so: 'Waqtiga' },
+  noPassengersDay: { en: 'No passengers registered on this day.', so: 'Maalintan rakaab lama diiwaangelin.' },
+  noBusesYet: { en: 'No buses registered yet. They are added when they first arrive at a boosteejo.', so: 'Weli bas lama diiwaangelin.' },
+  total: { en: 'Total', so: 'Wadarta' },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TextKey = keyof typeof TEXT;
