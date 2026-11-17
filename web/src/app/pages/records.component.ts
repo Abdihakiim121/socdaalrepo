@@ -15,99 +15,119 @@ import { MOGADISHU_TZ, mogadishuToday } from '../core/time';
   imports: [FormsModule, RouterLink, DatePipe, TranslatePipe],
   template: `
     <div class="page">
-      <div class="page-head">
+      <header class="page-header">
         <h1>{{ 'records' | t }}</h1>
-        <div class="row" role="tablist">
-          <button type="button" role="tab" class="pill" [class.active]="tab() === 'trips'" [attr.aria-selected]="tab() === 'trips'" (click)="tab.set('trips')">{{ 'trips' | t }}</button>
-          <button type="button" role="tab" class="pill" [class.active]="tab() === 'passengers'" [attr.aria-selected]="tab() === 'passengers'" (click)="tab.set('passengers')">{{ 'passengers' | t }}</button>
+        <div class="segmented" role="tablist">
+          <button type="button" role="tab" [class.on]="tab() === 'trips'" [attr.aria-selected]="tab() === 'trips'" (click)="tab.set('trips')">{{ 'trips' | t }}</button>
+          <button type="button" role="tab" [class.on]="tab() === 'passengers'" [attr.aria-selected]="tab() === 'passengers'" (click)="tab.set('passengers')">{{ 'passengers' | t }}</button>
         </div>
-      </div>
+      </header>
 
       @if (error()) {
         <div class="alert alert-error" role="alert">{{ error() }}</div>
       }
 
       @if (tab() === 'trips') {
-        <form class="card form-grid" (ngSubmit)="searchTrips()">
-          <div class="field">
-            <label for="rdate">{{ 'date' | t }}</label>
-            <input id="rdate" name="rdate" type="date" [(ngModel)]="date">
-          </div>
-          <div class="field">
-            <label for="rroute">{{ 'route' | t }}</label>
-            <select id="rroute" name="rroute" [(ngModel)]="routeId">
-              <option [ngValue]="null">—</option>
-              @for (r of routes(); track r.id) {
-                <option [ngValue]="r.id">→ {{ r.destinationCity?.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="field">
-            <label for="rplate">{{ 'plate' | t }}</label>
-            <input id="rplate" name="rplate" [(ngModel)]="plate">
-          </div>
-          <button class="btn btn-primary" type="submit">{{ 'search' | t }}</button>
-        </form>
+        <section class="panel">
+          <form class="panel-body filters" (ngSubmit)="searchTrips()">
+            <div class="field">
+              <label class="label" for="rdate">{{ 'date' | t }}</label>
+              <input class="input" id="rdate" name="rdate" type="date" [(ngModel)]="date">
+            </div>
+            <div class="field">
+              <label class="label" for="rroute">{{ 'route' | t }}</label>
+              <select class="select" id="rroute" name="rroute" [(ngModel)]="routeId">
+                <option [ngValue]="null">{{ 'allRoutes' | t }}</option>
+                @for (r of routes(); track r.id) {
+                  <option [ngValue]="r.id">{{ r.destinationCity?.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label class="label" for="rplate">{{ 'plate' | t }}</label>
+              <input class="input" id="rplate" name="rplate" [(ngModel)]="plate" placeholder="BN 4127">
+            </div>
+            <button class="btn btn-primary" type="submit">{{ 'search' | t }}</button>
+          </form>
 
-        <div class="card table-wrap">
           @if (trips().length === 0) {
-            <p class="muted">—</p>
+            <div class="empty"><p>{{ 'noResults' | t }}</p></div>
           } @else {
-            <table>
-              <thead>
-                <tr><th>{{ 'arrived' | t }}</th><th>{{ 'route' | t }}</th><th>{{ 'bus' | t }}</th><th>{{ 'driver' | t }}</th><th>{{ 'passengers' | t }}</th><th>{{ 'departed' | t }}</th><th>{{ 'status' | t }}</th></tr>
-              </thead>
-              <tbody>
-                @for (t of trips(); track t.id) {
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
                   <tr>
-                    <td>{{ t.arrivedAt | date: 'dd/MM HH:mm' : tz }}</td>
-                    <td>→ {{ t.route?.destinationCity?.name }}</td>
-                    <td><a [routerLink]="['/trips', t.id]">{{ t.bus.plate }}</a></td>
-                    <td>{{ t.driverName || '—' }}</td>
-                    <td>{{ t.seatsBooked }}/{{ t.bus.seatCount }}</td>
-                    <td>{{ t.departedAt ? (t.departedAt | date: 'HH:mm' : tz) : '—' }}</td>
-                    <td><span [class]="'badge badge-' + t.status">{{ statusKey(t) | t }}</span></td>
+                    <th>{{ 'arrived' | t }}</th>
+                    <th>{{ 'route' | t }}</th>
+                    <th>{{ 'bus' | t }}</th>
+                    <th>{{ 'driver' | t }}</th>
+                    <th class="num">{{ 'passengers' | t }}</th>
+                    <th>{{ 'departed' | t }}</th>
+                    <th>{{ 'status' | t }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (t of trips(); track t.id) {
+                    <tr>
+                      <td>{{ t.arrivedAt | date: 'dd MMM, HH:mm' : tz }}</td>
+                      <td>{{ t.route?.destinationCity?.name }}</td>
+                      <td><a [routerLink]="['/trips', t.id]"><span class="plate">{{ t.bus.plate }}</span></a></td>
+                      <td>{{ t.driverName || '—' }}</td>
+                      <td class="num">{{ t.seatsBooked }} / {{ t.bus.seatCount }}</td>
+                      <td>{{ t.departedAt ? (t.departedAt | date: 'HH:mm' : tz) : '—' }}</td>
+                      <td><span [class]="'status status-' + t.status">{{ statusKey(t) | t }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           }
-        </div>
+        </section>
       } @else {
-        <form class="card row" (ngSubmit)="searchPassengers()">
-          <div class="field grow">
-            <label for="pq">{{ 'name' | t }} / {{ 'phone' | t }}</label>
-            <input id="pq" name="pq" minlength="2" [(ngModel)]="q">
-          </div>
-          <button class="btn btn-primary" type="submit" style="align-self: flex-end">{{ 'search' | t }}</button>
-        </form>
+        <section class="panel">
+          <form class="panel-body filters" (ngSubmit)="searchPassengers()">
+            <div class="field wide">
+              <label class="label" for="pq">{{ 'searchPassenger' | t }}</label>
+              <input class="input" id="pq" name="pq" minlength="2" [(ngModel)]="q" placeholder="Amina / 61 234 5678">
+            </div>
+            <button class="btn btn-primary" type="submit">{{ 'search' | t }}</button>
+          </form>
 
-        <div class="card table-wrap">
           @if (passengers().length === 0) {
-            <p class="muted">—</p>
+            <div class="empty"><p>{{ 'noResults' | t }}</p></div>
           } @else {
-            <table>
-              <thead>
-                <tr><th>{{ 'date' | t }}</th><th>{{ 'name' | t }}</th><th>{{ 'phone' | t }}</th><th>{{ 'seats' | t }}</th><th>{{ 'route' | t }}</th><th>{{ 'bus' | t }}</th><th>{{ 'status' | t }}</th></tr>
-              </thead>
-              <tbody>
-                @for (p of passengers(); track p.id) {
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
                   <tr>
-                    <td>{{ p.createdAt | date: 'dd/MM HH:mm' : tz }}</td>
-                    <td>{{ p.name }}</td>
-                    <td>+252 {{ p.phone }}</td>
-                    <td>{{ p.seats }}</td>
-                    <td>{{ p.trip?.route?.station?.name }} → {{ p.trip?.route?.destinationCity?.name }}</td>
-                    <td>
-                      @if (p.trip) { <a [routerLink]="['/trips', p.trip.id]">{{ p.trip.bus.plate }}</a> }
-                    </td>
-                    <td>{{ (p.status === 'active' ? 'booked' : 'cancelled') | t }}</td>
+                    <th>{{ 'date' | t }}</th>
+                    <th>{{ 'name' | t }}</th>
+                    <th>{{ 'phone' | t }}</th>
+                    <th class="num">{{ 'seats' | t }}</th>
+                    <th>{{ 'route' | t }}</th>
+                    <th>{{ 'bus' | t }}</th>
+                    <th>{{ 'status' | t }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (p of passengers(); track p.id) {
+                    <tr [class.row-dim]="p.status === 'cancelled'">
+                      <td>{{ p.createdAt | date: 'dd MMM, HH:mm' : tz }}</td>
+                      <td class="strong">{{ p.name }}</td>
+                      <td>+252 {{ p.phone }}</td>
+                      <td class="num">{{ p.seats }}</td>
+                      <td>{{ p.trip?.route?.station?.name }} → {{ p.trip?.route?.destinationCity?.name }}</td>
+                      <td>
+                        @if (p.trip) { <a [routerLink]="['/trips', p.trip.id]"><span class="plate">{{ p.trip.bus.plate }}</span></a> }
+                      </td>
+                      <td><span [class]="'status status-' + p.status">{{ (p.status === 'active' ? 'statusBooked' : 'cancelled') | t }}</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           }
-        </div>
+        </section>
       }
     </div>
   `,

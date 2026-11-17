@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Observable, of, switchMap } from 'rxjs';
 import { ApiService, errorText } from '../core/api.service';
 import { Bus } from '../core/api.types';
@@ -12,88 +12,116 @@ import { timeToIso } from '../core/time';
 @Component({
   selector: 'app-register-bus',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, RouterLink, TranslatePipe],
   template: `
-    <div class="page">
-      <h1>{{ 'registerBus' | t }}</h1>
+    <div class="page narrow">
+      <header class="page-header">
+        <div>
+          <a class="crumb" routerLink="/queue">{{ 'queue' | t }}</a>
+          <h1>{{ 'registerBus' | t }}</h1>
+        </div>
+      </header>
 
       <form class="stack" (ngSubmit)="submit()">
-        <div class="card stack">
-          <div class="field">
-            <label for="route">{{ 'route' | t }}</label>
-            <select id="route" name="route" required [(ngModel)]="chosenRouteId">
-              @for (r of routes(); track r.id) {
-                <option [ngValue]="r.id">{{ ctx.station()?.city?.name }} → {{ r.destinationCity?.name }}</option>
-              }
-            </select>
+        <section class="panel">
+          <div class="panel-header"><h2>{{ 'route' | t }}</h2></div>
+          <div class="panel-body">
+            <div class="field">
+              <label class="label" for="route">{{ 'route' | t }}</label>
+              <select class="select" id="route" name="route" required [(ngModel)]="chosenRouteId">
+                @for (r of routes(); track r.id) {
+                  <option [ngValue]="r.id">{{ ctx.station()?.city?.name }} → {{ r.destinationCity?.name }}</option>
+                }
+              </select>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="card stack">
-          <h2>{{ 'bus' | t }}</h2>
-          @if (bus(); as b) {
-            <div class="row spread">
-              <div><strong>{{ b.plate }}</strong> <span class="muted">· {{ b.type || '' }} · {{ b.seatCount }} {{ 'seats' | t }}</span></div>
-              <button type="button" class="btn" (click)="bus.set(null)">{{ 'cancel' | t }}</button>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>{{ 'findBus' | t }}</h2>
+              <p>{{ 'findBusHint' | t }}</p>
             </div>
-          } @else {
-            <div class="row">
-              <div class="field grow">
-                <label for="plate">{{ 'plate' | t }}</label>
-                <input id="plate" name="plate" [(ngModel)]="plate" (keydown.enter)="$event.preventDefault(); find()" placeholder="BN 4127">
+          </div>
+          <div class="panel-body stack">
+            @if (bus(); as b) {
+              <div class="picked">
+                <span class="plate">{{ b.plate }}</span>
+                <span class="muted">{{ b.type || ('bus' | t) }}, {{ b.seatCount }} {{ 'seats' | t }}</span>
+                <button type="button" class="btn btn-sm" (click)="bus.set(null)">{{ 'change' | t }}</button>
               </div>
-              <button type="button" class="btn" style="align-self: flex-end" (click)="find()">{{ 'search' | t }}</button>
-            </div>
-            @for (b of results(); track b.id) {
-              <button type="button" class="btn" style="justify-content: space-between" (click)="bus.set(b)">
-                <span>{{ b.plate }}</span><span class="muted">{{ b.seatCount }} {{ 'seats' | t }}</span>
-              </button>
-            }
-            @if (searched() && results().length === 0) {
-              <div class="stack">
-                <strong>{{ 'newBus' | t }}: {{ plate }}</strong>
+            } @else {
+              <div class="search-row">
+                <div class="field">
+                  <label class="label" for="plate">{{ 'plate' | t }}</label>
+                  <input class="input" id="plate" name="plate" [(ngModel)]="plate" (keydown.enter)="$event.preventDefault(); find()" placeholder="BN 4127" autocomplete="off">
+                </div>
+                <button type="button" class="btn" (click)="find()">{{ 'search' | t }}</button>
+              </div>
+
+              @if (results().length > 0) {
+                <div class="results">
+                  @for (b of results(); track b.id) {
+                    <button type="button" class="result" (click)="bus.set(b)">
+                      <span class="plate">{{ b.plate }}</span>
+                      <span class="muted">{{ b.type || '' }}</span>
+                      <span class="muted seats">{{ b.seatCount }} {{ 'seats' | t }}</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              @if (searched() && results().length === 0) {
+                <div class="alert alert-success" role="status">{{ 'notFoundNewBus' | t }}</div>
                 <div class="form-grid">
                   <div class="field">
-                    <label for="seats">{{ 'seats' | t }}</label>
-                    <input id="seats" name="seats" type="number" min="1" max="100" required [(ngModel)]="newSeats">
+                    <label class="label" for="seats">{{ 'seats' | t }}</label>
+                    <input class="input" id="seats" name="seats" type="number" min="1" max="100" required [(ngModel)]="newSeats">
                   </div>
                   <div class="field">
-                    <label for="type">{{ 'busType' | t }}</label>
-                    <input id="type" name="type" [(ngModel)]="newType" placeholder="Coaster">
+                    <label class="label" for="type">{{ 'busType' | t }} <span class="muted">({{ 'optional' | t }})</span></label>
+                    <input class="input" id="type" name="type" [(ngModel)]="newType" placeholder="Coaster">
                   </div>
                   <div class="field">
-                    <label for="owner">{{ 'owner' | t }}</label>
-                    <input id="owner" name="owner" [(ngModel)]="newOwner">
+                    <label class="label" for="owner">{{ 'owner' | t }} <span class="muted">({{ 'optional' | t }})</span></label>
+                    <input class="input" id="owner" name="owner" [(ngModel)]="newOwner">
                   </div>
                   <div class="field">
-                    <label for="ownerPhone">{{ 'ownerPhone' | t }}</label>
-                    <input id="ownerPhone" name="ownerPhone" type="tel" [(ngModel)]="newOwnerPhone">
+                    <label class="label" for="ownerPhone">{{ 'ownerPhone' | t }} <span class="muted">({{ 'optional' | t }})</span></label>
+                    <input class="input" id="ownerPhone" name="ownerPhone" type="tel" [(ngModel)]="newOwnerPhone">
                   </div>
                 </div>
-              </div>
+              }
             }
-          }
-        </div>
+          </div>
+        </section>
 
-        <div class="card form-grid">
-          <div class="field">
-            <label for="driver">{{ 'driver' | t }}</label>
-            <input id="driver" name="driver" [(ngModel)]="driverName">
+        <section class="panel">
+          <div class="panel-header"><h2>{{ 'tripDetails' | t }}</h2></div>
+          <div class="panel-body form-grid">
+            <div class="field">
+              <label class="label" for="driver">{{ 'driver' | t }}</label>
+              <input class="input" id="driver" name="driver" [(ngModel)]="driverName">
+            </div>
+            <div class="field">
+              <label class="label" for="driverPhone">{{ 'driverPhone' | t }}</label>
+              <input class="input" id="driverPhone" name="driverPhone" type="tel" [(ngModel)]="driverPhone">
+            </div>
+            <div class="field">
+              <label class="label" for="time">{{ 'departureTime' | t }} <span class="muted">({{ 'optional' | t }})</span></label>
+              <input class="input" id="time" name="time" type="time" [(ngModel)]="departureTime">
+            </div>
           </div>
-          <div class="field">
-            <label for="driverPhone">{{ 'driverPhone' | t }}</label>
-            <input id="driverPhone" name="driverPhone" type="tel" [(ngModel)]="driverPhone">
-          </div>
-          <div class="field">
-            <label for="time">{{ 'departureTime' | t }}</label>
-            <input id="time" name="time" type="time" [(ngModel)]="departureTime">
-          </div>
-        </div>
+        </section>
 
         @if (error()) {
           <div class="alert alert-error" role="alert">{{ error() }}</div>
         }
-        <button class="btn btn-primary" type="submit" [disabled]="busy() || !canSubmit()">{{ 'registerBus' | t }}</button>
+        <div class="form-actions">
+          <a class="btn" routerLink="/queue">{{ 'cancel' | t }}</a>
+          <button class="btn btn-primary" type="submit" [disabled]="busy() || !canSubmit()">{{ 'addToQueue' | t }}</button>
+        </div>
       </form>
     </div>
   `,
