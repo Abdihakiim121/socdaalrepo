@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService, errorText } from '../core/api.service';
@@ -8,6 +9,7 @@ import { TranslatePipe } from '../core/i18n';
 import { StationContextService } from '../core/station-context.service';
 import { MOGADISHU_TZ, mogadishuToday } from '../core/time';
 import { IconComponent } from '../shared/icon.component';
+import { LiveService } from '../core/live.service';
 
 /** Everyone registered on a bus at this boosteejo: by day, route, or a name or phone search. */
 @Component({
@@ -119,6 +121,13 @@ export class PassengersComponent {
     effect(() => {
       if (this.ctx.stationId()) this.load();
     });
+    // New registrations, here or on another device, show up straight away.
+    inject(LiveService)
+      .on()
+      .pipe(takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((e) => {
+        if (e.type === 'passengers.updated') this.load();
+      });
   }
 
   load() {

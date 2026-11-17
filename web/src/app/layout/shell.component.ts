@@ -8,6 +8,8 @@ import { I18nService, Lang, TextKey, TranslatePipe } from '../core/i18n';
 import { LiveService } from '../core/live.service';
 import { StationContextService } from '../core/station-context.service';
 import { IconComponent, IconName } from '../shared/icon.component';
+import { RegisterPassengerComponent } from '../shared/register-passenger.component';
+import { RegisterPassengerService } from '../shared/register-passenger.service';
 
 interface NavLink {
   label: TextKey;
@@ -41,7 +43,7 @@ const OPEN_KEY = 'socdaal.nav.open';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, IconComponent],
+  imports: [NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, IconComponent, RegisterPassengerComponent],
   template: `
     <div class="layout" [class.menu-open]="menuOpen()">
       <aside class="sidebar" id="sidebar">
@@ -164,6 +166,9 @@ const OPEN_KEY = 'socdaal.nav.open';
               @if (!last) { <app-icon name="chevronRight" class="crumb-sep" /> }
             }
           </nav>
+          <button type="button" class="btn btn-primary btn-sm topbar-action" (click)="passengerPanel.open(); $event.stopPropagation()">
+            <app-icon name="userPlus" /><span class="topbar-action-label">{{ 'addPassenger' | t }}</span>
+          </button>
           <span class="conn" [class.off]="!live.connected()" role="status"
                 [title]="live.connected() ? '' : ('notConnected' | t)">
             <span class="dot" aria-hidden="true"></span>{{ (live.connected() ? 'live' : 'offline') | t }}
@@ -173,6 +178,10 @@ const OPEN_KEY = 'socdaal.nav.open';
         <main><router-outlet /></main>
       </div>
     </div>
+
+    @if (passengerPanel.request()) {
+      <app-register-passenger />
+    }
   `,
   styles: [`
     .layout { min-height: 100vh; display: flex; }
@@ -282,6 +291,8 @@ const OPEN_KEY = 'socdaal.nav.open';
     .crumbs a:hover { color: var(--ink); }
     .crumbs .current { color: var(--ink); font-weight: 500; }
     .crumb-sep { --icon-size: 14px; color: var(--icon); }
+    .topbar-action { margin-right: 4px; }
+    @media (max-width: 560px) { .topbar-action-label { display: none; } .topbar-action { width: 36px; padding: 0; } }
     .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--green); padding: 3px 10px; border-radius: 999px; background: var(--green-tint); }
     .conn .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
     .conn.off { color: var(--amber); background: var(--amber-tint); }
@@ -306,6 +317,7 @@ export class ShellComponent {
   readonly ctx = inject(StationContextService);
   readonly i18n = inject(I18nService);
   readonly live = inject(LiveService);
+  readonly passengerPanel = inject(RegisterPassengerService);
   private readonly router = inject(Router);
 
   readonly moduleGroups: NavGroup[] = [

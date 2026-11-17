@@ -8,6 +8,7 @@ import { TextKey, TranslatePipe } from '../core/i18n';
 import { LiveService } from '../core/live.service';
 import { StationContextService } from '../core/station-context.service';
 import { IconComponent } from '../shared/icon.component';
+import { RegisterPassengerService } from '../shared/register-passenger.service';
 import { isoToTime, timeToIso } from '../core/time';
 
 @Component({
@@ -22,7 +23,7 @@ import { isoToTime, timeToIso } from '../core/time';
           <p class="page-sub">{{ 'queueSub' | t }}</p>
         </div>
         <div class="page-actions">
-          <a class="btn btn-primary" routerLink="/boosteejo/arrival" [queryParams]="{ routeId: selectedRouteId() }">
+          <a class="btn" routerLink="/boosteejo/arrival" [queryParams]="{ routeId: selectedRouteId() }">
             <app-icon name="plus" />
             {{ 'registerArrival' | t }}
           </a>
@@ -91,10 +92,11 @@ import { isoToTime, timeToIso } from '../core/time';
                 <button type="button" class="btn btn-icon btn-sm" [attr.aria-label]="'moveDown' | t" [title]="'moveDown' | t" [disabled]="last || busy()" (click)="move(trip, 'down')">
                   <app-icon name="down" />
                 </button>
+                <button type="button" class="btn btn-sm" [disabled]="trip.seatsLeft === 0" [title]="'addPassenger' | t" [attr.aria-label]="'addPassenger' | t" (click)="registerPassenger(trip)">
+                  <app-icon name="userPlus" /><span class="hide-md">{{ 'passenger' | t }}</span>
+                </button>
                 @if (first) {
                   <button type="button" class="btn btn-primary btn-sm" [disabled]="busy()" (click)="depart(trip)">{{ 'markDeparted' | t }}</button>
-                } @else {
-                  <a class="btn btn-sm" [routerLink]="['/boosteejo/trips', trip.id]">{{ 'passengers' | t }}</a>
                 }
               </div>
             </div>
@@ -108,6 +110,7 @@ export class QueueComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly ctx = inject(StationContextService);
+  private readonly passengerPanel = inject(RegisterPassengerService);
 
   /** From the address: /queue?routeId=12 */
   readonly routeId = input<string>();
@@ -131,6 +134,8 @@ export class QueueComponent {
   constructor() {
     effect(() => {
       const id = this.selectedRouteId();
+      // The top-bar Register passenger button opens on the route being viewed.
+      if (id) this.passengerPanel.lastRouteId = id;
       if (id) this.load(id);
     }, { allowSignalWrites: true });
     inject(LiveService)
@@ -140,6 +145,10 @@ export class QueueComponent {
         const id = this.selectedRouteId();
         if (id && e.routeId === id) this.load(id);
       });
+  }
+
+  registerPassenger(trip?: Trip) {
+    this.passengerPanel.open({ routeId: this.selectedRouteId() ?? undefined, tripId: trip?.id });
   }
 
   selectRoute(id: number) {
