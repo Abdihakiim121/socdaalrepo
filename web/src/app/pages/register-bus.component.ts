@@ -17,8 +17,7 @@ import { timeToIso } from '../core/time';
     <div class="page narrow">
       <header class="page-header">
         <div>
-          <a class="crumb" routerLink="/queue">{{ 'queue' | t }}</a>
-          <h1>{{ 'registerBus' | t }}</h1>
+          <h1>{{ 'registerArrival' | t }}</h1>
         </div>
       </header>
 
@@ -119,7 +118,7 @@ import { timeToIso } from '../core/time';
           <div class="alert alert-error" role="alert">{{ error() }}</div>
         }
         <div class="form-actions">
-          <a class="btn" routerLink="/queue">{{ 'cancel' | t }}</a>
+          <a class="btn" routerLink="/boosteejo/queue">{{ 'cancel' | t }}</a>
           <button class="btn btn-primary" type="submit" [disabled]="busy() || !canSubmit()">{{ 'addToQueue' | t }}</button>
         </div>
       </form>
@@ -209,7 +208,7 @@ export class RegisterBusComponent {
         ),
       )
       .subscribe({
-        next: () => this.router.navigate(['/queue'], { queryParams: { routeId } }),
+        next: () => this.router.navigate(['/boosteejo/queue'], { queryParams: { routeId } }),
         error: (e) => {
           this.error.set(errorText(e));
           this.busy.set(false);

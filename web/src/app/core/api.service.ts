@@ -55,6 +55,9 @@ export class ApiService {
   createCity(body: { name: string; region?: string }) {
     return this.http.post<City>(`${this.base}/cities`, body);
   }
+  updateCity(id: number, body: { name?: string; region?: string }) {
+    return this.http.patch<City>(`${this.base}/cities/${id}`, body);
+  }
   stations(cityId?: number) {
     return this.http.get<Station[]>(`${this.base}/stations`, { params: params({ cityId }) });
   }
@@ -98,6 +101,9 @@ export class ApiService {
   createBus(body: { plate: string; seatCount: number; type?: string; ownerName?: string; ownerPhone?: string }) {
     return this.http.post<Bus>(`${this.base}/buses`, body);
   }
+  updateBus(id: number, body: { seatCount?: number; type?: string; ownerName?: string; ownerPhone?: string }) {
+    return this.http.patch<Bus>(`${this.base}/buses/${id}`, body);
+  }
 
   // Queue and trips
   queue(routeId: number) {
@@ -135,7 +141,7 @@ export class ApiService {
   cancelPassenger(id: number) {
     return this.http.post<Passenger>(`${this.base}/passengers/${id}/cancel`, {});
   }
-  searchPassengers(q: string) {
-    return this.http.get<Passenger[]>(`${this.base}/passengers`, { params: params({ q }) });
+  listPassengers(filter: { date?: string; q?: string; routeId?: number; stationId?: number }) {
+    return this.http.get<Passenger[]>(`${this.base}/passengers`, { params: params(filter) });
   }
 }

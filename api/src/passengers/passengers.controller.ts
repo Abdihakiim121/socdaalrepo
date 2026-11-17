@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators';
-import { CreatePassengerDto } from './passengers.dto';
+import { CreatePassengerDto, PassengerQueryDto } from './passengers.dto';
 import { PassengersService } from './passengers.service';
 
 @Controller()
@@ -24,8 +24,9 @@ export class PassengersController {
     return this.passengers.cancel(id, user);
   }
 
+  /** ?date=2026-11-17 (default today), or ?q=name-or-phone; admins may add &stationId=. */
   @Get('passengers')
-  search(@Query('q') q: string = '', @CurrentUser() user: AuthUser) {
-    return this.passengers.search(q, user);
+  browse(@Query() query: PassengerQueryDto, @CurrentUser() user: AuthUser) {
+    return this.passengers.browse(query, user);
   }
 }

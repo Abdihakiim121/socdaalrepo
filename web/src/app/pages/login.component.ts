@@ -76,7 +76,7 @@ export class LoginComponent {
     this.busy.set(true);
     this.error.set('');
     this.auth.login(this.phone, this.pin).subscribe({
-      next: () => this.router.navigate(['/today']),
+      next: () => this.router.navigate(['/dashboard']),
       error: (e) => {
         this.error.set(errorText(e));
         this.busy.set(false);

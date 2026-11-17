@@ -76,7 +76,7 @@ Send `Authorization: Bearer <token>` on every call except login.
 | GET | /api/trips/:id/passengers | manager of it, admin | Passenger list |
 | POST | /api/trips/:id/passengers | manager of it, admin | `{ name, phone, seats }`; refused if the bus is full |
 | POST | /api/passengers/:id/cancel | manager of it, admin | Cancel a passenger |
-| GET | /api/passengers?q= | signed in | Search by name or phone |
+| GET | /api/passengers?date=&q=&routeId=&stationId= | signed in | Passengers registered on a day (default today), or matching a name or phone; managers only get their boosteejo |
 
 Phone numbers are stored without `+252` or a leading 0, so `+252 61 234 5678` and `0612345678` match.
 Bus plates are stored in capitals with single spaces.

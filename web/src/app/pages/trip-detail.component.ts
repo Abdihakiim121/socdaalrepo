@@ -21,7 +21,6 @@ import { MOGADISHU_TZ } from '../core/time';
       @if (trip(); as t) {
         <header class="page-header">
           <div>
-            <a class="crumb" routerLink="/queue" [queryParams]="{ routeId: t.routeId }">{{ 'queue' | t }}</a>
             <div class="title-row">
               <span class="plate plate-lg">{{ t.bus.plate }}</span>
               <h1>{{ origin() }} → {{ t.route?.destinationCity?.name }}</h1>

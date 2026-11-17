@@ -1,18 +1,26 @@
 # Socdaal Boosteejo web app
 
-The Angular manager app. A manager signs in with phone and PIN and works on their own boosteejo; the admin can switch between boosteejos from the sidebar. On phones the sidebar opens from the menu button.
+The Angular manager app. A manager signs in with phone and PIN and works on their own boosteejo; the admin switches boosteejo from the top of the sidebar. On phones the sidebar opens from the menu button.
 
-| Screen | Path | What it does |
-| --- | --- | --- |
-| Login | `/login` | Phone number + PIN |
-| Today | `/today` | Buses in queue, departures and passengers today, per route |
-| Bus queue | `/queue?routeId=` | Buses in order for one route; move up / down, set departure time, mark the first bus departed |
-| Register bus arrival | `/buses/arrival` | Find a bus by plate or add a new one, then put it at the end of a route's queue |
-| Trip detail | `/trips/:id` | Passenger list, register and cancel passengers, seats left, mark departed |
-| Records | `/records` | Trips by date, route or plate; passengers by name or phone |
-| Admin | `/admin` | Cities, boosteejos (location, contact, hours), routes, manager accounts |
+The menu is grouped by module:
 
-Screens are in Somali by default, with an English switch at the bottom of the sidebar. The Somali wording in `src/app/core/i18n.ts` is a first draft: have a boosteejo manager check it before the pilot.
+| Menu | Page | Path | What it does |
+| --- | --- | --- | --- |
+| | Dashboard | `/dashboard` | Buses in queue, departures and passengers today, per route |
+| Boosteejo | Bus queue | `/boosteejo/queue` | Buses in order for one route; move up / down, set departure time, mark the first bus departed |
+| | Register arrival | `/boosteejo/arrival` | Find a bus by plate or add a new one, then put it at the end of a route's queue |
+| | Trips | `/boosteejo/trips` | Every bus that queued, by date, route or plate; opens the trip with its passengers |
+| | Passengers | `/boosteejo/passengers` | Everyone registered on a day, or found by name or phone |
+| | Buses | `/boosteejo/buses` | Every registered bus; add and edit |
+| Dalmar | Tours, Hotels, Guides | `/dalmar/...` | Coming in Stage 3; each page says what is planned |
+| Administration | User management | `/users` | Admins and managers: add, reset PIN, move to another boosteejo, block |
+| | Settings › Boosteejos | `/settings/boosteejos` | Every boosteejo with location, contact and hours |
+| | Settings › Routes | `/settings/routes` | The destinations each boosteejo serves |
+| | Settings › Cities | `/settings/cities` | Cities and regions |
+
+Administration is only shown to admins. Old addresses such as `/queue` and `/admin` redirect to the new ones.
+
+Screens are in Somali by default, with an English switch in the user menu at the bottom of the sidebar. The administration pages are in English for now. The Somali wording in `src/app/core/i18n.ts` is a first draft: have a boosteejo manager check it before the pilot.
 
 All times are shown and entered in Mogadishu time (UTC+3).
 

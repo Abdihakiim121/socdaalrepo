@@ -6,22 +6,23 @@ import { TodayResponse } from '../core/api.types';
 import { TranslatePipe } from '../core/i18n';
 import { LiveService } from '../core/live.service';
 import { StationContextService } from '../core/station-context.service';
+import { IconComponent } from '../shared/icon.component';
 
 @Component({
   selector: 'app-today',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, IconComponent],
   template: `
     <div class="page">
       <header class="page-header">
         <div>
-          <h1>{{ 'today' | t }}</h1>
+          <h1>{{ 'dashboard' | t }}</h1>
           <p class="page-sub">{{ 'todaySub' | t }}{{ data() ? ', ' + data()!.date : '' }}</p>
         </div>
         <div class="page-actions">
-          <a class="btn btn-primary" routerLink="/buses/arrival">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-            {{ 'registerBus' | t }}
+          <a class="btn btn-primary" routerLink="/boosteejo/arrival">
+            <app-icon name="plus" />
+            {{ 'registerArrival' | t }}
           </a>
         </div>
       </header>
@@ -60,7 +61,7 @@ import { StationContextService } from '../core/station-context.service';
                       <td class="num">{{ r.busesInQueue }}</td>
                       <td class="num">{{ r.departedToday }}</td>
                       <td class="num">{{ r.passengersToday }}</td>
-                      <td class="num"><a class="btn btn-sm" [routerLink]="['/queue']" [queryParams]="{ routeId: r.routeId }">{{ 'queue' | t }}</a></td>
+                      <td class="num"><a class="btn btn-sm" routerLink="/boosteejo/queue" [queryParams]="{ routeId: r.routeId }">{{ 'queue' | t }}</a></td>
                     </tr>
                   }
                 </tbody>

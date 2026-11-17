@@ -1,107 +1,174 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth.service';
-import { I18nService, Lang, TranslatePipe } from '../core/i18n';
+import { I18nService, Lang, TextKey, TranslatePipe } from '../core/i18n';
 import { LiveService } from '../core/live.service';
 import { StationContextService } from '../core/station-context.service';
+import { IconComponent, IconName } from '../shared/icon.component';
 
-/**
- * Sidebar layout. On a laptop or tablet the menu stays on the left;
- * on a phone it opens from the menu button and closes after choosing a screen.
- */
+interface NavLink {
+  label: TextKey;
+  link: string;
+}
+
+interface NavGroup {
+  id: 'boosteejo' | 'dalmar' | 'settings';
+  label: TextKey;
+  icon: IconName;
+  base: string;
+  items: NavLink[];
+  soon?: boolean;
+  adminOnly?: boolean;
+}
+
+/** What a route puts in its `data`, read for the breadcrumb. */
+export interface PageData {
+  section?: TextKey;
+  parent?: { label: TextKey; link: string };
+  title?: TextKey;
+}
+
+interface Crumb {
+  label: TextKey;
+  link?: string;
+}
+
+const OPEN_KEY = 'socdaal.nav.open';
+
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, IconComponent],
   template: `
     <div class="layout" [class.menu-open]="menuOpen()">
       <aside class="sidebar" id="sidebar">
-        <a class="brand" routerLink="/today">
-          <span class="mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="2.5"></rect><path d="M5 11h14M8 17v2.5M16 17v2.5"></path><circle cx="8.5" cy="14" r="0.8"></circle><circle cx="15.5" cy="14" r="0.8"></circle></svg>
-          </span>
-          <span class="wordmark">Socdaal <span>Boosteejo</span></span>
-        </a>
-
-        <div class="station">
+        <!-- Boosteejo switcher -->
+        <div class="switcher-wrap" (click)="$event.stopPropagation()">
           @if (auth.isAdmin()) {
-            <label class="station-label" for="station-pick">{{ 'boosteejo' | t }}</label>
-            <select id="station-pick" class="select" (change)="pick($event)">
-              @for (s of ctx.stations(); track s.id) {
-                <option [value]="s.id" [selected]="s.id === ctx.stationId()">{{ s.name }}, {{ s.city?.name }}</option>
-              }
-            </select>
+            <button type="button" class="switcher" [attr.aria-expanded]="stationMenu()" aria-haspopup="listbox"
+                    [title]="'switchBoosteejo' | t" (click)="toggle('station')">
+              <span class="monogram" aria-hidden="true">{{ monogram() }}</span>
+              <span class="switcher-text">
+                <span class="switcher-name">{{ ctx.station()?.name ?? '—' }}</span>
+                <span class="switcher-city">{{ ctx.station()?.city?.name }}</span>
+              </span>
+              <app-icon name="chevronsUpDown" class="switcher-chev" />
+            </button>
+            @if (stationMenu()) {
+              <div class="popover station-pop" role="listbox" [attr.aria-label]="'switchBoosteejo' | t">
+                <span class="pop-label">{{ 'switchBoosteejo' | t }}</span>
+                @for (s of ctx.stations(); track s.id) {
+                  <button type="button" role="option" class="pop-item" [attr.aria-selected]="s.id === ctx.stationId()" (click)="pick(s.id)">
+                    <span class="monogram sm" aria-hidden="true">{{ s.name.charAt(0).toUpperCase() }}</span>
+                    <span class="pop-text"><span>{{ s.name }}</span><span class="muted">{{ s.city?.name }}</span></span>
+                    @if (s.id === ctx.stationId()) { <app-icon name="check" class="pop-check" /> }
+                  </button>
+                }
+              </div>
+            }
           } @else {
-            <span class="station-label">{{ 'boosteejo' | t }}</span>
-            <span class="station-name">{{ ctx.station()?.name }}</span>
-            <span class="station-city">{{ ctx.station()?.city?.name }}</span>
+            <div class="switcher static">
+              <span class="monogram" aria-hidden="true">{{ monogram() }}</span>
+              <span class="switcher-text">
+                <span class="switcher-name">{{ ctx.station()?.name ?? '—' }}</span>
+                <span class="switcher-city">{{ ctx.station()?.city?.name }}</span>
+              </span>
+            </div>
           }
         </div>
 
         <nav class="nav" [attr.aria-label]="'menu' | t">
-          <span class="nav-group">{{ 'navStation' | t }}</span>
-          <a routerLink="/today" routerLinkActive="on">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg>
-            {{ 'today' | t }}
+          <a class="item" routerLink="/dashboard" routerLinkActive="on">
+            <app-icon name="dashboard" />
+            <span>{{ 'dashboard' | t }}</span>
           </a>
-          <a routerLink="/queue" routerLinkActive="on">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"></path><path d="M4 6h1M4 12h1M4 18h1"></path></svg>
-            {{ 'queue' | t }}
-          </a>
-          <a routerLink="/buses/arrival" routerLinkActive="on">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-            {{ 'registerBus' | t }}
-          </a>
-          <a routerLink="/records" routerLinkActive="on">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg>
-            {{ 'records' | t }}
-          </a>
+
+          @for (g of moduleGroups; track g.id) {
+            <ng-container *ngTemplateOutlet="group; context: { $implicit: g }" />
+          }
+
           @if (auth.isAdmin()) {
-            <span class="nav-group">{{ 'navSettings' | t }}</span>
-            <a routerLink="/admin" routerLinkActive="on">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></svg>
-              {{ 'admin' | t }}
+            <span class="section-label">{{ 'administration' | t }}</span>
+            <a class="item" routerLink="/users" routerLinkActive="on">
+              <app-icon name="users" />
+              <span>{{ 'userManagement' | t }}</span>
             </a>
+            <ng-container *ngTemplateOutlet="group; context: { $implicit: settingsGroup }" />
           }
         </nav>
 
-        <div class="foot">
-          <div class="who">
-            <span class="avatar" aria-hidden="true">{{ initials() }}</span>
-            <span class="who-text">
-              <span class="who-name">{{ auth.user()?.name }}</span>
-              <span class="who-phone">+252 {{ auth.user()?.phone }}</span>
-            </span>
-            <button type="button" class="btn btn-ghost btn-icon btn-sm" [attr.aria-label]="'signOut' | t" [title]="'signOut' | t" (click)="auth.logout()">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+        <ng-template #group let-g>
+          <div class="group" [class.open]="isOpen(g.id)">
+            <button type="button" class="item group-head" [class.has-active]="inGroup(g)"
+                    [attr.aria-expanded]="isOpen(g.id)" [attr.aria-controls]="'grp-' + g.id" (click)="toggleGroup(g.id)">
+              <app-icon [name]="g.icon" />
+              <span>{{ g.label | t }}</span>
+              @if (g.soon) { <span class="soon">{{ 'soon' | t }}</span> }
+              <app-icon name="chevronRight" class="chev" />
             </button>
+            @if (isOpen(g.id)) {
+              <div class="sub" [id]="'grp-' + g.id">
+                @for (l of g.items; track l.link) {
+                  <a class="sub-item" [routerLink]="l.link" routerLinkActive="on">{{ l.label | t }}</a>
+                }
+              </div>
+            }
           </div>
-          <div class="segmented lang" role="group" aria-label="Luqadda / Language">
-            <button type="button" [class.on]="i18n.lang() === 'so'" (click)="setLang('so')">Soomaali</button>
-            <button type="button" [class.on]="i18n.lang() === 'en'" (click)="setLang('en')">English</button>
-          </div>
+        </ng-template>
+
+        <!-- Signed-in user -->
+        <div class="account" (click)="$event.stopPropagation()">
+          @if (userMenu()) {
+            <div class="popover user-pop" role="menu">
+              <div class="pop-section">
+                <span class="pop-label"><app-icon name="globe" /> {{ 'language' | t }}</span>
+                <div class="segmented full">
+                  <button type="button" [class.on]="i18n.lang() === 'so'" (click)="setLang('so')">Soomaali</button>
+                  <button type="button" [class.on]="i18n.lang() === 'en'" (click)="setLang('en')">English</button>
+                </div>
+              </div>
+              <button type="button" class="pop-item danger" role="menuitem" (click)="auth.logout()">
+                <app-icon name="logout" /> {{ 'signOut' | t }}
+              </button>
+            </div>
+          }
+          <button type="button" class="user" aria-haspopup="menu" [attr.aria-expanded]="userMenu()" (click)="toggle('user')">
+            <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+            <span class="user-text">
+              <span class="user-name">{{ auth.user()?.name }}</span>
+              <span class="user-role">{{ (auth.isAdmin() ? 'roleAdmin' : 'roleManager') | t }}</span>
+            </span>
+            <app-icon name="chevronsUpDown" class="user-chev" />
+          </button>
         </div>
       </aside>
 
       <button type="button" class="scrim" tabindex="-1" aria-hidden="true" (click)="menuOpen.set(false)"></button>
 
       <div class="content">
-        <header class="mobile-bar">
-          <button type="button" class="btn btn-ghost btn-icon" aria-controls="sidebar" [attr.aria-expanded]="menuOpen()"
-                  [attr.aria-label]="'menu' | t" (click)="menuOpen.set(!menuOpen())">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <header class="topbar">
+          <button type="button" class="icon-btn menu-btn" aria-controls="sidebar" [attr.aria-expanded]="menuOpen()"
+                  [attr.aria-label]="'menu' | t" (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()">
+            <app-icon name="menu" />
           </button>
-          <span class="wordmark">Socdaal <span>Boosteejo</span></span>
+          <nav class="crumbs" aria-label="Breadcrumb">
+            @for (c of crumbs(); track $index; let last = $last) {
+              @if (c.link && !last) {
+                <a [routerLink]="c.link">{{ c.label | t }}</a>
+              } @else {
+                <span [class.current]="last" [attr.aria-current]="last ? 'page' : null">{{ c.label | t }}</span>
+              }
+              @if (!last) { <app-icon name="chevronRight" class="crumb-sep" /> }
+            }
+          </nav>
+          <span class="conn" [class.off]="!live.connected()" role="status"
+                [title]="live.connected() ? '' : ('notConnected' | t)">
+            <span class="dot" aria-hidden="true"></span>{{ (live.connected() ? 'live' : 'offline') | t }}
+          </span>
         </header>
-
-        @if (!live.connected()) {
-          <div class="connection" role="status">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
-            {{ 'notConnected' | t }}
-          </div>
-        }
 
         <main><router-outlet /></main>
       </div>
@@ -110,56 +177,128 @@ import { StationContextService } from '../core/station-context.service';
   styles: [`
     .layout { min-height: 100vh; display: flex; }
 
+    /* ---------- Sidebar ---------- */
     .sidebar {
-      width: 252px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line);
-      display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+      width: 264px; flex-shrink: 0; height: 100vh; position: sticky; top: 0;
+      display: flex; flex-direction: column; background: var(--side-bg); border-right: 1px solid var(--line);
     }
-    .brand { display: flex; align-items: center; gap: 10px; padding: 20px 20px 16px; color: var(--ink); text-decoration: none; }
-    .brand:hover { text-decoration: none; }
-    .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--teal); display: grid; place-items: center; flex-shrink: 0; }
-    .mark svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .wordmark { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; color: var(--ink); }
-    .wordmark span { font-weight: 400; color: var(--muted); }
 
-    .station { margin: 0 12px 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); display: flex; flex-direction: column; gap: 2px; }
-    .station-label { font-size: 12px; color: var(--muted); }
-    .station-name { font-weight: 600; }
-    .station-city { font-size: 13px; color: var(--muted); }
-    .station .select { margin-top: 4px; min-height: 36px; }
-
-    .nav { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; flex: 1; }
-    .nav-group { font-size: 12px; color: var(--muted); padding: 16px 10px 6px; }
-    .nav a {
-      display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 10px; border-radius: var(--r);
-      color: var(--ink); text-decoration: none; font-weight: 500;
+    .switcher-wrap { position: relative; padding: 12px 12px 8px; }
+    .switcher {
+      width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px;
+      border: 1px solid transparent; background: transparent; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
     }
-    .nav a:hover { background: var(--canvas); }
-    .nav a.on { background: var(--teal-tint); color: var(--teal-hover); font-weight: 600; }
-    .nav svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
-    .nav a.on svg { color: var(--teal); }
+    .switcher:hover { background: var(--side-hover); }
+    .switcher[aria-expanded='true'] { background: var(--surface); border-color: var(--line); box-shadow: var(--shadow); }
+    .switcher.static { cursor: default; }
+    .switcher.static:hover { background: transparent; }
+    .monogram {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center;
+      background: var(--teal); color: #fff; font-weight: 600; font-size: 14px;
+    }
+    .monogram.sm { width: 24px; height: 24px; border-radius: 6px; font-size: 12px; background: var(--teal-tint); color: var(--teal-hover); }
+    .switcher-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+    .switcher-name { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .switcher-city { font-size: 12px; color: var(--muted); }
+    .switcher-chev { color: var(--icon); --icon-size: 16px; }
 
-    .foot { border-top: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .who { display: flex; align-items: center; gap: 10px; }
-    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--teal-tint); color: var(--teal-hover); display: grid; place-items: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
-    .who-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-    .who-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .who-phone { font-size: 12px; color: var(--muted); }
-    .lang { display: flex; }
-    .lang button { flex: 1; min-height: 30px; font-size: 13px; }
+    .nav { flex: 1; overflow-y: auto; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 1px; }
+    .item {
+      display: flex; align-items: center; gap: 10px; width: 100%; min-height: 34px; padding: 0 10px; border-radius: 8px;
+      border: none; background: transparent; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--side-ink);
+      text-decoration: none; cursor: pointer; text-align: left;
+    }
+    .item app-icon { color: var(--icon); }
+    .item:hover { background: var(--side-hover); text-decoration: none; }
+    .item.on { background: var(--side-active); color: var(--teal-hover); }
+    .item.on app-icon { color: var(--teal); }
+    .item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+    .group-head .chev { --icon-size: 14px; transition: transform 0.15s ease; }
+    .group.open .group-head .chev { transform: rotate(90deg); }
+    .group:not(.open) .group-head.has-active { color: var(--teal-hover); }
+    .group:not(.open) .group-head.has-active app-icon { color: var(--teal); }
+    .soon {
+      flex: none !important; font-size: 11px; font-weight: 500; color: var(--muted); background: var(--side-hover);
+      border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; line-height: 18px;
+    }
+
+    .sub { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 2px 0 6px 29px; }
+    .sub::before { content: ''; position: absolute; left: 19px; top: 2px; bottom: 8px; width: 1px; background: var(--line); }
+    .sub-item {
+      position: relative; display: flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px;
+      font-size: 13.5px; color: var(--muted-ink); text-decoration: none;
+    }
+    .sub-item:hover { background: var(--side-hover); color: var(--ink); text-decoration: none; }
+    .sub-item.on { background: var(--side-active); color: var(--teal-hover); font-weight: 500; }
+    .sub-item.on::before { content: ''; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 1px; background: var(--teal); }
+
+    .section-label { font-size: 12px; color: var(--muted); padding: 18px 10px 6px; }
+
+    /* Account */
+    .account { position: relative; padding: 8px 12px 12px; border-top: 1px solid var(--line); }
+    .user {
+      width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px;
+      border: none; background: transparent; font: inherit; color: var(--ink); cursor: pointer; text-align: left;
+    }
+    .user:hover, .user[aria-expanded='true'] { background: var(--side-hover); }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: #dfe9ea; color: var(--teal-hover); display: grid; place-items: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .user-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+    .user-name { font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-role { font-size: 12px; color: var(--muted); }
+    .user-chev { color: var(--icon); --icon-size: 16px; }
+
+    /* Popovers */
+    .popover {
+      position: absolute; left: 12px; right: 12px; z-index: 30; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 10px; box-shadow: 0 12px 32px rgba(23, 32, 43, 0.14), 0 2px 6px rgba(23, 32, 43, 0.06);
+      padding: 6px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .station-pop { top: calc(100% - 2px); max-height: 320px; overflow-y: auto; }
+    .user-pop { bottom: calc(100% - 2px); }
+    .pop-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 6px 8px 4px; --icon-size: 14px; }
+    .pop-section { padding-bottom: 6px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+    .pop-section .segmented { margin: 2px 6px 4px; }
+    .pop-item {
+      display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 8px; border: none; border-radius: 7px;
+      background: transparent; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; text-align: left; width: 100%;
+    }
+    .pop-item:hover { background: var(--side-hover); }
+    .pop-item.danger { color: var(--red); }
+    .pop-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+    .pop-text .muted { font-size: 12px; }
+    .pop-check { color: var(--teal); --icon-size: 16px; }
+    .segmented.full { display: flex; }
+    .segmented.full button { flex: 1; min-height: 30px; font-size: 13px; }
+
+    /* ---------- Top bar ---------- */
     .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .mobile-bar { display: none; }
+    .topbar {
+      height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 32px; background: var(--surface);
+      border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
+    }
+    .crumbs { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--muted); }
+    .crumbs a { color: var(--muted); }
+    .crumbs a:hover { color: var(--ink); }
+    .crumbs .current { color: var(--ink); font-weight: 500; }
+    .crumb-sep { --icon-size: 14px; color: var(--icon); }
+    .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--green); padding: 3px 10px; border-radius: 999px; background: var(--green-tint); }
+    .conn .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .conn.off { color: var(--amber); background: var(--amber-tint); }
+    .icon-btn { width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: var(--ink); display: none; place-items: center; cursor: pointer; }
+    .icon-btn:hover { background: var(--canvas); }
     .scrim { display: none; }
-    .connection { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--amber-tint); color: var(--amber); padding: 8px 16px; font-weight: 500; border-bottom: 1px solid #f5d9b5; }
-    .connection svg, .mobile-bar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     @media (max-width: 899px) {
-      .sidebar { position: fixed; left: 0; top: 0; z-index: 20; transform: translateX(-100%); transition: transform 0.2s ease; }
-      .menu-open .sidebar { transform: none; box-shadow: 8px 0 32px rgba(23, 32, 43, 0.18); }
-      .menu-open .scrim { display: block; position: fixed; inset: 0; z-index: 10; border: none; background: rgba(23, 32, 43, 0.4); }
-      .mobile-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+      .sidebar { position: fixed; left: 0; top: 0; z-index: 40; transform: translateX(-100%); transition: transform 0.2s ease; }
+      .menu-open .sidebar { transform: none; box-shadow: 12px 0 40px rgba(23, 32, 43, 0.18); }
+      .menu-open .scrim { display: block; position: fixed; inset: 0; z-index: 35; border: none; background: rgba(23, 32, 43, 0.35); }
+      .topbar { padding: 0 12px; }
+      .icon-btn { display: grid; }
     }
-    @media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar, .group-head .chev { transition: none; }
+    }
   `],
 })
 export class ShellComponent {
@@ -167,10 +306,58 @@ export class ShellComponent {
   readonly ctx = inject(StationContextService);
   readonly i18n = inject(I18nService);
   readonly live = inject(LiveService);
+  private readonly router = inject(Router);
 
-  /** Only used on phones; on wider screens the sidebar is always shown. */
+  readonly moduleGroups: NavGroup[] = [
+    {
+      id: 'boosteejo',
+      label: 'boosteejo',
+      icon: 'bus',
+      base: '/boosteejo',
+      items: [
+        { label: 'queue', link: '/boosteejo/queue' },
+        { label: 'registerArrival', link: '/boosteejo/arrival' },
+        { label: 'trips', link: '/boosteejo/trips' },
+        { label: 'passengers', link: '/boosteejo/passengers' },
+        { label: 'buses', link: '/boosteejo/buses' },
+      ],
+    },
+    {
+      id: 'dalmar',
+      label: 'dalmar',
+      icon: 'compass',
+      base: '/dalmar',
+      soon: true,
+      items: [
+        { label: 'tours', link: '/dalmar/tours' },
+        { label: 'hotels', link: '/dalmar/hotels' },
+        { label: 'guides', link: '/dalmar/guides' },
+      ],
+    },
+  ];
+
+  readonly settingsGroup: NavGroup = {
+    id: 'settings',
+    label: 'settings',
+    icon: 'settings',
+    base: '/settings',
+    adminOnly: true,
+    items: [
+      { label: 'boosteejos', link: '/settings/boosteejos' },
+      { label: 'routes', link: '/settings/routes' },
+      { label: 'cities', link: '/settings/cities' },
+    ],
+  };
+
+  /** Phone only: the sidebar slides in over the page. */
   readonly menuOpen = signal(false);
+  readonly stationMenu = signal(false);
+  readonly userMenu = signal(false);
+  private readonly open = signal<Record<string, boolean>>(this.readOpen());
+  private readonly url = signal(this.router.url);
+  readonly crumbs = signal<Crumb[]>([]);
 
+  readonly monogram = computed(() => (this.ctx.station()?.name ?? '?').charAt(0).toUpperCase());
   readonly initials = computed(() =>
     (this.auth.user()?.name ?? '')
       .split(/\s+/)
@@ -181,20 +368,82 @@ export class ShellComponent {
   );
 
   constructor() {
-    inject(Router)
-      .events.pipe(
-        filter((e) => e instanceof NavigationEnd),
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
         takeUntilDestroyed(inject(DestroyRef)),
       )
-      .subscribe(() => this.menuOpen.set(false));
+      .subscribe((e) => {
+        this.url.set(e.urlAfterRedirects);
+        this.crumbs.set(this.buildCrumbs(this.router.routerState.snapshot.root));
+        this.menuOpen.set(false);
+        this.closePopovers();
+        // Open the group of the page you are on.
+        const active = [...this.moduleGroups, this.settingsGroup].find((g) => e.urlAfterRedirects.startsWith(g.base));
+        if (active && !this.isOpen(active.id)) this.toggleGroup(active.id);
+      });
   }
 
-  pick(event: Event) {
-    this.ctx.choose(Number((event.target as HTMLSelectElement).value));
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  closePopovers() {
+    this.stationMenu.set(false);
+    this.userMenu.set(false);
+  }
+
+  toggle(which: 'station' | 'user') {
+    const target = which === 'station' ? this.stationMenu : this.userMenu;
+    const next = !target();
+    this.closePopovers();
+    target.set(next);
+  }
+
+  isOpen(id: string) {
+    return this.open()[id] ?? id !== 'dalmar';
+  }
+
+  inGroup(g: NavGroup) {
+    return this.url().startsWith(g.base);
+  }
+
+  toggleGroup(id: string) {
+    this.open.update((o) => ({ ...o, [id]: !this.isOpen(id) }));
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(this.open()));
+    } catch {
+      /* not remembered in private mode */
+    }
+  }
+
+  pick(stationId: number) {
+    this.ctx.choose(stationId);
+    this.closePopovers();
     this.menuOpen.set(false);
   }
 
   setLang(lang: Lang) {
     this.i18n.setLang(lang);
+  }
+
+  private buildCrumbs(root: ActivatedRouteSnapshot): Crumb[] {
+    let node = root;
+    let data: PageData = {};
+    while (node.firstChild) {
+      node = node.firstChild;
+      data = { ...data, ...(node.data as PageData) };
+    }
+    const crumbs: Crumb[] = [];
+    if (data.section) crumbs.push({ label: data.section });
+    if (data.parent) crumbs.push({ label: data.parent.label, link: data.parent.link });
+    if (data.title) crumbs.push({ label: data.title });
+    return crumbs;
+  }
+
+  private readOpen(): Record<string, boolean> {
+    try {
+      return JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
   }
 }
