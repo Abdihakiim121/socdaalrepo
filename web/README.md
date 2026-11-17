@@ -18,6 +18,8 @@ The menu is grouped by module:
 | | Settings › Routes | `/settings/routes` | The destinations each boosteejo serves |
 | | Settings › Cities | `/settings/cities` | Cities and regions |
 
+**Registering passengers:** the **Register passenger** button in the top bar works from any page. It opens a side panel where you pick the route; the boarding bus is already selected with its seats left. Type the phone number (the name fills in if they travelled before), name and seats, then register. The panel stays open for the next person in line and moves to the next bus when one is full. Each bus on the Bus queue also has its own register button.
+
 Administration is only shown to admins. Old addresses such as `/queue` and `/admin` redirect to the new ones.
 
 Screens are in Somali by default, with an English switch in the user menu at the bottom of the sidebar. The administration pages are in English for now. The Somali wording in `src/app/core/i18n.ts` is a first draft: have a boosteejo manager check it before the pilot.

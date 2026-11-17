@@ -20,7 +20,7 @@ import { IconComponent } from '../shared/icon.component';
           <p class="page-sub">{{ 'todaySub' | t }}{{ data() ? ', ' + data()!.date : '' }}</p>
         </div>
         <div class="page-actions">
-          <a class="btn btn-primary" routerLink="/boosteejo/arrival">
+          <a class="btn" routerLink="/boosteejo/arrival">
             <app-icon name="plus" />
             {{ 'registerArrival' | t }}
           </a>

@@ -203,8 +203,8 @@ a:hover { text-decoration: underline; }
 /* ---------- Departure board (the bus queue) ---------- */
 
 .board-row {
-  display: grid; align-items: center; gap: 20px; padding: 16px 20px; border-bottom: 1px solid var(--line);
-  grid-template-columns: 40px 184px minmax(140px, 1.2fr) minmax(130px, 1fr) 100px auto;
+  display: grid; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line);
+  grid-template-columns: 40px 184px minmax(140px, 1.2fr) minmax(130px, 1fr) 100px 240px;
 }
 .board-row:last-child { border-bottom: none; }
 .board-row.boarding { background: var(--amber-tint); box-shadow: inset 3px 0 0 var(--amber); }
@@ -333,3 +333,6 @@ input[type='date']:hover::-webkit-calendar-picker-indicator { opacity: 0.7; }
   .toolbar .btn { flex: 1 1 100%; }
   .table th, .table td { padding-left: 14px; padding-right: 14px; }
 }
+
+@media (max-width: 900px) { .hide-sm { display: none; } }
+@media (max-width: 1439px) { .hide-md { display: none; } }

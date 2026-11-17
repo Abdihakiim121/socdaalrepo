@@ -110,6 +110,15 @@ const TEXT = {
   noPassengersDay: { en: 'No passengers registered on this day.', so: 'Maalintan rakaab lama diiwaangelin.' },
   noBusesYet: { en: 'No buses registered yet. They are added when they first arrive at a boosteejo.', so: 'Weli bas lama diiwaangelin.' },
   total: { en: 'Total', so: 'Wadarta' },
+
+  // Register passenger panel
+  passenger: { en: 'Passenger', so: 'Rakaabka' },
+  registeredOn: { en: 'registered on', so: 'waxaa lagu diiwaangeliyay' },
+  foundEarlier: { en: 'Name filled in from an earlier trip. Check it is right.', so: 'Magaca waxaa laga keenay safar hore. Hubi inuu sax yahay.' },
+  fewerSeats: { en: 'Fewer seats', so: 'Kuraas yar' },
+  moreSeats: { en: 'More seats', so: 'Kuraas badan' },
+  done: { en: 'Done', so: 'Dhammaad' },
+  close: { en: 'Close', so: 'Xir' },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TextKey = keyof typeof TEXT;
