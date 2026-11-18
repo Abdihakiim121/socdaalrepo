@@ -10,7 +10,10 @@
     "start:prod": "node dist/main",
     "typeorm": "typeorm-ts-node-commonjs -d src/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate src/migrations/Migration",
+    "migration:check": "npm run typeorm -- migration:generate src/migrations/Check --check",
     "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:run:prod": "typeorm migration:run -d dist/data-source.js",
     "seed": "ts-node src/seed.ts"
   },
   "dependencies": {

@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { BusesModule } from './buses/buses.module';
 import { databaseOptions } from './config/database.config';
+import { HealthController } from './health/health.controller';
 import { LiveModule } from './live/live.module';
 import { LocationsModule } from './locations/locations.module';
 import { PassengersModule } from './passengers/passengers.module';
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
     TripsModule,
     PassengersModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Every endpoint needs a login unless marked @Public(); roles are checked after.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

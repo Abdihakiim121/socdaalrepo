@@ -137,9 +137,9 @@ interface UserForm {
             }
             <div class="field">
               <label class="label" for="fpin">{{ f.id ? 'New PIN' : 'PIN' }} @if (f.id) { <span class="muted">(optional)</span> }</label>
-              <input class="input" id="fpin" name="fpin" inputmode="numeric" autocomplete="off" minlength="4" maxlength="6"
+              <input class="input" id="fpin" name="fpin" inputmode="numeric" autocomplete="off" minlength="6" maxlength="6" pattern="[0-9]{6}"
                      [required]="!f.id" [(ngModel)]="f.pin">
-              <span class="hint">4 to 6 digits. Give it to the person directly, not by message.</span>
+              <span class="hint">6 digits. Give it to the person directly, not by message.</span>
             </div>
             @if (f.id) {
               <label class="switch-row">

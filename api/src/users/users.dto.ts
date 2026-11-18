@@ -11,7 +11,7 @@ export class CreateUserDto {
   @Length(6, 30)
   phone: string;
 
-  @Matches(/^\d{4,6}$/, { message: 'PIN must be 4 to 6 digits' })
+  @Matches(/^\d{6}$/, { message: 'PIN must be 6 digits' })
   pin: string;
 
   @IsEnum(UserRole)
@@ -27,7 +27,7 @@ export class CreateUserDto {
 export class UpdateUserDto {
   @IsOptional() @IsString() @Length(2, 100) name?: string;
   @IsOptional() @IsString() @Length(6, 30) phone?: string;
-  @IsOptional() @Matches(/^\d{4,6}$/, { message: 'PIN must be 4 to 6 digits' }) pin?: string;
+  @IsOptional() @Matches(/^\d{6}$/, { message: 'PIN must be 6 digits' }) pin?: string;
   @IsOptional() @Type(() => Number) @IsInt() stationId?: number;
   @IsOptional() @IsBoolean() active?: boolean;
 }

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AuthUser } from '../auth/auth.types';
+import { UserAccessService } from '../auth/user-access.service';
 import { UserRole } from '../entities';
 
 export type LiveEvent = 'queue.updated' | 'passengers.updated';
@@ -18,19 +19,33 @@ export class LiveGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly access: UserAccessService,
+  ) {}
 
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token as string | undefined;
       if (!token) throw new Error('no token');
-      const user = await this.jwt.verifyAsync<AuthUser>(token);
+      const claims = await this.jwt.verifyAsync<AuthUser>(token);
+      const user = await this.access.current(claims.sub);
+      if (!user) throw new Error('blocked');
+      client.join(`user:${user.sub}`);
       if (user.role === UserRole.ADMIN) client.join('admins');
       if (user.stationId) client.join(`station:${user.stationId}`);
     } catch {
       this.log.debug(`Rejected socket ${client.id}`);
       client.disconnect(true);
     }
+  }
+
+  /**
+   * Close a user's live connections, e.g. when they are blocked or moved to another boosteejo.
+   * The web app reconnects on its own, and joins the right rooms or is refused.
+   */
+  disconnectUser(userId: number) {
+    this.server?.in(`user:${userId}`).disconnectSockets(true);
   }
 
   notifyStation(stationId: number, event: LiveEvent, payload: Record<string, unknown>) {

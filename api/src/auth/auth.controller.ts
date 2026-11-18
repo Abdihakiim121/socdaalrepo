@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Ip, Post } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities';
@@ -14,8 +14,8 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.phone, dto.pin);
+  login(@Body() dto: LoginDto, @Ip() ip: string) {
+    return this.auth.login(dto.phone, dto.pin, ip);
   }
 
   @Get('me')

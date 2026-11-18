@@ -10,22 +10,60 @@ npm install
 cp .env.example .env          # then fill in DB_*, JWT_SECRET and ADMIN_*
 ```
 
+`JWT_SECRET` must be at least 32 random characters. Generate one with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
 Create the MySQL database (utf8mb4 so Somali names save correctly):
 
 ```sql
 CREATE DATABASE socdaal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Create the tables, then the first admin and starting cities:
+Create the tables, then the first admin (6-digit PIN) and starting cities:
 
 ```bash
-npm run migration:generate    # writes src/migrations/<timestamp>-Migration.ts from the entities
 npm run migration:run
 npm run seed
 npm run start:dev
 ```
 
-On your own laptop you can skip migrations with `DB_SYNCHRONIZE=true`. Never use that on the server.
+The API checks its settings before starting and stops with a clear list of what's wrong. `GET /api/health` reports whether it can reach the database.
+
+### A database made before migrations existed
+
+If your database was created with `DB_SYNCHRONIZE=true`, it already has tables, and the first migration would fail with "table already exists". The tables also changed slightly (timestamps are now set by the API). With test data only, recreate it:
+
+```sql
+DROP DATABASE socdaaldb;
+CREATE DATABASE socdaaldb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+then run `npm run migration:run` and `npm run seed` as above.
+
+## Changing the database
+
+Tables are only changed through migrations in `src/migrations/`. Keep `DB_SYNCHRONIZE=false`; it is refused in production.
+
+1. Change an entity in `src/entities/`.
+2. `npm run migration:generate` writes `src/migrations/<timestamp>-Migration.ts`. Rename it to say what changed, and read it.
+3. `npm run migration:run` applies it. `npm run migration:revert` undoes the last one.
+4. Commit the migration with the entity change. CI fails a pull request whose entities and migrations don't match, and prints the missing migration in its log.
+
+On the server, after building: `npm run migration:run:prod`.
+
+## Checks on every pull request
+
+GitHub Actions (`.github/workflows/ci.yml`) builds the API and the web app, runs the migrations on an empty MySQL 8 database, and runs `scripts/smoke.sh`: an end-to-end test of the main flow against the real API (sign-in, boosteejo, route, buses, queue order, seat limits, departures, manager access, blocking, PIN limits).
+
+## Sign-in rules
+
+- PINs for new users are 6 digits. Existing 4- and 5-digit PINs still work until they are reset.
+- After 5 wrong PINs for a phone number, or 30 from one network address, sign-in is refused for up to 15 minutes.
+- Blocking a user, or moving a manager to another boosteejo, applies within seconds and closes their live connection.
+- Sign-in lasts 7 days (`JWT_EXPIRES_IN`). Behind Nginx, set `TRUST_PROXY=true` so the PIN limit sees real addresses.
 
 ## How the data fits together
 
@@ -47,6 +85,7 @@ Send `Authorization: Bearer <token>` on every call except login.
 | --- | --- | --- | --- |
 | POST | /api/auth/login | anyone | `{ phone, pin }` → `{ token, user }` |
 | GET | /api/auth/me | signed in | The signed-in user and their boosteejo |
+| GET | /api/health | anyone | `{ status, database }`; 503 when the database is unreachable |
 | GET | /api/cities | signed in | All cities |
 | POST | /api/cities | admin | `{ name, region? }` |
 | PATCH | /api/cities/:id | admin | Edit a city |
