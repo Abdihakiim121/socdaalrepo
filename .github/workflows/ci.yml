@@ -79,6 +79,15 @@ jobs:
           path: api/src/migrations/*-Pending.ts
           if-no-files-found: ignore
 
+      - name: Print the migration the database still needs
+        if: failure()
+        run: |
+          # Same file as the artifact, gzipped and base64-encoded between markers, for tools that can read logs but not artifacts.
+          for f in src/migrations/*-Pending.ts; do
+            [ -f "$f" ] || continue
+            echo "=====BEGIN api/$f"; gzip -c "$f" | base64 -w0; echo; echo "=====END api/$f"
+          done
+
       - name: Seed the first admin and cities
         run: npm run seed
 
@@ -117,7 +126,19 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install
-        run: npm ci
+        run: |
+          if ! npm ci; then
+            echo "::warning::web/package-lock.json is out of sync with package.json. Installing with npm install to keep checking the build."
+            npm install --no-audit --no-fund
+            echo "LOCK_UPDATED=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Build for production
         run: npm run build
+
+      - name: Hand back the updated lock file
+        if: always() && env.LOCK_UPDATED == 'true'
+        run: |
+          echo "=====BEGIN web/package-lock.json"; gzip -c package-lock.json | base64 -w0; echo; echo "=====END web/package-lock.json"
+          echo "::error::Commit an updated web/package-lock.json (run npm install in web/, or use the file printed above)."
+          exit 1
