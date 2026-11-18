@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API build, migrations and smoke test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: socdaal_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root-password"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASSWORD: ci-root-password
+      DB_NAME: socdaal_ci
+      DB_SYNCHRONIZE: 'false'
+      JWT_SECRET: ci-only-jwt-secret-0123456789abcdef0123456789
+      ADMIN_NAME: CI Admin
+      ADMIN_PHONE: '610000000'
+      ADMIN_PIN: '135790'
+      CORS_ORIGIN: http://localhost:4200
+      PORT: '3000'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run migrations on an empty database
+        run: npm run migration:run
+
+      - name: Check the migrations match the entities
+        run: |
+          npm run typeorm -- migration:generate src/migrations/Pending > generate.log 2>&1 || true
+          if ls src/migrations/*-Pending.ts > /dev/null 2>&1; then
+            cat generate.log
+            echo "::error::The entities changed but no migration was added. Download the 'pending-migration' artifact from this run, rename it, review it, and commit it to api/src/migrations/."
+            exit 1
+          fi
+          echo "Migrations and entities match."
+
+      - name: Upload the migration the database still needs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pending-migration
+          path: api/src/migrations/*-Pending.ts
+          if-no-files-found: ignore
+
+      - name: Seed the first admin and cities
+        run: npm run seed
+
+      - name: Start the API
+        run: |
+          node dist/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health > /dev/null; then echo "API is up"; exit 0; fi
+            sleep 1
+          done
+          echo "::error::The API did not start"
+          cat api.log
+          exit 1
+
+      - name: Smoke test the main flow
+        run: API=http://localhost:3000/api bash scripts/smoke.sh
+
+      - name: API log
+        if: always()
+        run: cat api.log 2>/dev/null || true
+
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build

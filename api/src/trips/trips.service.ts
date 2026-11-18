@@ -5,7 +5,7 @@ import { assertStationAccess, isAdmin } from '../auth/access';
 import { AuthUser } from '../auth/auth.types';
 import { BusesService, normalizePlate } from '../buses/buses.service';
 import { dayRange, mogadishuToday } from '../common/dates';
-import { Passenger, PassengerStatus, Trip, TripStatus } from '../entities';
+import { Bus, Passenger, PassengerStatus, Route, Trip, TripStatus } from '../entities';
 import { LiveGateway } from '../live/live.gateway';
 import { LocationsService } from '../locations/locations.service';
 import { CreateTripDto, TripRecordsQueryDto, UpdateTripDto } from './trips.dto';
@@ -141,10 +141,10 @@ export class TripsService {
     if (!route.active) throw new BadRequestException('This route is not active');
 
     const bus = await this.buses.findOne(dto.busId);
-    await this.assertBusFree(bus.id, bus.plate);
 
     const id = await this.ds.transaction(async (em) => {
       const queue = await this.lockQueue(em, route.id);
+      await this.assertBusFree(em, bus.id, bus.plate);
       const trip = em.create(Trip, {
         routeId: route.id,
         busId: bus.id,
@@ -227,10 +227,10 @@ export class TripsService {
   async reopen(id: number, user: AuthUser) {
     const trip = await this.findTrip(id);
     if (ACTIVE_STATUSES.includes(trip.status)) throw new BadRequestException('This trip is already in the queue');
-    await this.assertBusFree(trip.busId, trip.bus.plate);
 
     await this.ds.transaction(async (em) => {
       const queue = await this.lockQueue(em, trip.routeId);
+      await this.assertBusFree(em, trip.busId, trip.bus.plate);
       trip.status = TripStatus.WAITING;
       trip.departedAt = null;
       await this.applyOrder(em, [trip, ...queue]);
@@ -286,7 +286,11 @@ export class TripsService {
   }
 
   /** Lock the route's queue rows for this transaction, so two managers can't reorder at the same moment. */
-  private lockQueue(em: EntityManager, routeId: number) {
+  private async lockQueue(em: EntityManager, routeId: number) {
+    // The route row is the one lock every change to this queue takes first. Locking only the
+    // queue's trip rows is not enough: with an empty queue there are no rows, so two buses
+    // registered at the same moment could both become #1.
+    await em.getRepository(Route).findOne({ where: { id: routeId }, lock: { mode: 'pessimistic_write' } });
     return em.getRepository(Trip).find({
       where: { routeId, status: In(ACTIVE_STATUSES) },
       order: { queuePosition: 'ASC', id: 'ASC' },
@@ -306,8 +310,10 @@ export class TripsService {
   private async leaveQueue(trip: Trip, status: TripStatus.DEPARTED | TripStatus.CANCELLED) {
     await this.ds.transaction(async (em) => {
       const queue = await this.lockQueue(em, trip.routeId);
+      const leaving = queue.find((t) => t.id === trip.id);
+      // Another manager may have marked it departed or removed it a moment ago.
+      if (!leaving) throw new BadRequestException('This bus is no longer in the queue');
       const rest = queue.filter((t) => t.id !== trip.id);
-      const leaving = queue.find((t) => t.id === trip.id) ?? trip;
       leaving.status = status;
       leaving.queuePosition = null;
       leaving.departedAt = status === TripStatus.DEPARTED ? new Date() : null;
@@ -323,9 +329,13 @@ export class TripsService {
     }
   }
 
-  /** A bus can only wait in one queue at a time. */
-  private async assertBusFree(busId: number, plate: string) {
-    const busy = await this.trips.findOne({
+  /**
+   * A bus can only wait in one queue at a time. Runs inside the transaction with the bus row
+   * locked, so the same bus can't be added to two routes' queues at the same moment.
+   */
+  private async assertBusFree(em: EntityManager, busId: number, plate: string) {
+    await em.getRepository(Bus).findOne({ where: { id: busId }, lock: { mode: 'pessimistic_write' } });
+    const busy = await em.getRepository(Trip).findOne({
       where: { busId, status: In(ACTIVE_STATUSES) },
       relations: { route: { station: true, destinationCity: true } },
     });

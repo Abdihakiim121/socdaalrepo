@@ -14,5 +14,7 @@ export const databaseOptions: DataSourceOptions = {
   charset: 'utf8mb4',
   entities: ENTITIES,
   migrations: [__dirname + '/../migrations/*.{ts,js}'],
-  synchronize: process.env.DB_SYNCHRONIZE === 'true',
+  // Never in production: synchronize can drop columns and their data. Use migrations there.
+  synchronize: process.env.DB_SYNCHRONIZE === 'true' && process.env.NODE_ENV !== 'production',
+  migrationsTableName: 'migrations',
 };

@@ -29,8 +29,8 @@ async function seed() {
 
   const phone = normalizePhone(process.env.ADMIN_PHONE ?? '');
   const pin = process.env.ADMIN_PIN ?? '';
-  if (!phone || !/^\d{4,6}$/.test(pin)) {
-    throw new Error('Set ADMIN_PHONE and a 4–6 digit ADMIN_PIN in .env');
+  if (!phone || !/^\d{6}$/.test(pin)) {
+    throw new Error('Set ADMIN_PHONE and a 6-digit ADMIN_PIN in .env');
   }
   if (!(await users.exists({ where: { phone } }))) {
     await users.save(

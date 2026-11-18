@@ -2,6 +2,9 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hashPin, normalizePhone } from '../auth/auth.service';
+import { AuthUser } from '../auth/auth.types';
+import { UserAccessService } from '../auth/user-access.service';
+import { LiveGateway } from '../live/live.gateway';
 import { Station, User, UserRole } from '../entities';
 import { CreateUserDto, UpdateUserDto } from './users.dto';
 
@@ -10,6 +13,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(Station) private readonly stations: Repository<Station>,
+    private readonly access: UserAccessService,
+    private readonly live: LiveGateway,
   ) {}
 
   list(stationId?: number) {
@@ -40,9 +45,13 @@ export class UsersService {
     return this.findOne(saved.id);
   }
 
-  async update(id: number, dto: UpdateUserDto) {
+  async update(id: number, dto: UpdateUserDto, actor: AuthUser) {
+    if (id === actor.sub && dto.active === false) {
+      throw new BadRequestException("You can't block your own account");
+    }
     const user = await this.users.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
+    const stationChanged = dto.stationId !== undefined && dto.stationId !== user.stationId;
 
     if (dto.phone) {
       const phone = normalizePhone(dto.phone);
@@ -61,6 +70,10 @@ export class UsersService {
     if (dto.pin) user.pinHash = await hashPin(dto.pin);
 
     await this.users.save(user);
+
+    // Apply the change now rather than when their sign-in expires.
+    this.access.invalidate(id);
+    if (stationChanged || dto.active === false) this.live.disconnectUser(id);
     return this.findOne(id);
   }
 
